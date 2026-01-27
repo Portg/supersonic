@@ -191,6 +191,11 @@ public class DataSetServiceImpl extends ServiceImpl<DataSetDOMapper, DataSetDO>
                 : Arrays.asList(dataSetDO.getAdmin().split(",")));
         dataSetResp.setAdminOrgs(StringUtils.isBlank(dataSetDO.getAdminOrg()) ? Lists.newArrayList()
                 : Arrays.asList(dataSetDO.getAdminOrg().split(",")));
+        dataSetResp.setViewers(StringUtils.isBlank(dataSetDO.getViewer()) ? Lists.newArrayList()
+                : Arrays.asList(dataSetDO.getViewer().split(",")));
+        dataSetResp.setViewOrgs(StringUtils.isBlank(dataSetDO.getViewOrg()) ? Lists.newArrayList()
+                : Arrays.asList(dataSetDO.getViewOrg().split(",")));
+        dataSetResp.setIsOpen(dataSetDO.getIsOpen());
         dataSetResp.setTypeEnum(TypeEnums.DATASET);
 
         return dataSetResp;

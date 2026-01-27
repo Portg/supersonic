@@ -1,12 +1,13 @@
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
-import { message, Button, Space, Popconfirm, Tooltip } from 'antd';
+import { message, Button, Space, Popconfirm, Tooltip, Tag } from 'antd';
 import React, { useRef, useState, useEffect } from 'react';
 import { useModel } from '@umijs/max';
 import { getGroupAuthInfo, removeGroupAuth } from '../../service';
 import { getOrganizationTree } from '@/components/SelectPartner/service';
 import PermissionCreateDrawer from './PermissionCreateDrawer';
 import { findDepartmentTree } from '@/pages/SemanticModel/utils';
+import { CheckCircleOutlined, FilterOutlined } from '@ant-design/icons';
 
 type Props = {};
 
@@ -144,7 +145,7 @@ const PermissionTable: React.FC<Props> = ({}) => {
     {
       dataIndex: 'columnPermission',
       title: '列权限',
-      // width: 400,
+      width: 200,
       ellipsis: {
         showTitle: false,
       },
@@ -173,14 +174,58 @@ const PermissionTable: React.FC<Props> = ({}) => {
               return enNameList;
             }, []);
           }
-          const words = [...dimensionNameList, ...metricsNameList].join(',');
+          const totalCount = dimensionNameList.length + metricsNameList.length;
+          const words = [...dimensionNameList, ...metricsNameList].join(', ');
           return (
-            <Tooltip placement="topLeft" title={words}>
-              {words}
+            <Tooltip placement="topLeft" title={words || '无列权限配置'}>
+              <Space>
+                <Tag icon={<CheckCircleOutlined />} color="blue">
+                  {totalCount} 个字段
+                </Tag>
+              </Space>
             </Tooltip>
           );
         }
-        return <> - </>;
+        return <Tag color="default">无</Tag>;
+      },
+    },
+    {
+      dataIndex: 'rowPermission',
+      title: '行权限',
+      width: 200,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (_, record: any) => {
+        const { dimensionFilters, dimensionFilterDescription } = record;
+        const hasRowFilter = Array.isArray(dimensionFilters) && dimensionFilters.some((f: string) => f && f.trim());
+        if (hasRowFilter) {
+          const filterText = dimensionFilters.filter((f: string) => f && f.trim()).join('; ');
+          return (
+            <Tooltip
+              placement="topLeft"
+              title={
+                <div>
+                  <div><strong>过滤条件：</strong></div>
+                  <div style={{ wordBreak: 'break-all' }}>{filterText}</div>
+                  {dimensionFilterDescription && (
+                    <>
+                      <div style={{ marginTop: 8 }}><strong>描述：</strong></div>
+                      <div>{dimensionFilterDescription}</div>
+                    </>
+                  )}
+                </div>
+              }
+            >
+              <Space>
+                <Tag icon={<FilterOutlined />} color="orange">
+                  已配置
+                </Tag>
+              </Space>
+            </Tooltip>
+          );
+        }
+        return <Tag color="default">无</Tag>;
       },
     },
     {

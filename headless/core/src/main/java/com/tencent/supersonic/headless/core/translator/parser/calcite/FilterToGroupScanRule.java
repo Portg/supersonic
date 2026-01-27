@@ -79,8 +79,8 @@ public class FilterToGroupScanRule extends RelRule<Config> implements Transforma
         int groupCount = logicalAggregate.getGroupCount();
         List<AggregateCall> newAggCalls = new ArrayList<>();
         for (AggregateCall aggCall : logicalAggregate.getAggCallList()) {
-            newAggCalls.add(
-                    aggCall.adaptTo(project1, aggCall.getArgList(), aggCall.filterArg, groupCount, newGroupCount));
+            newAggCalls.add(aggCall.adaptTo(project1, aggCall.getArgList(), aggCall.filterArg,
+                    groupCount, newGroupCount));
         }
         relBuilder.aggregate(relBuilder.groupKey(newGroupSet), newAggCalls);
         relBuilder.project(project0.getProjects());

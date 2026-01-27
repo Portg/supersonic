@@ -37,8 +37,7 @@ public class DictionaryAttributeUtil {
         String[] originals =
                 list.stream().map(l -> originalMap.get(l.getKey())).toArray(String[]::new);
         return new CoreDictionary.Attribute(
-                list.stream().map(Map.Entry::getKey).toList()
-                        .toArray(new Nature[0]),
+                list.stream().map(Map.Entry::getKey).toList().toArray(new Nature[0]),
                 list.stream().map(Map.Entry::getValue).mapToInt(Integer::intValue).toArray(),
                 originals, list.stream().map(Map.Entry::getValue).findFirst().get());
     }

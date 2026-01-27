@@ -19,9 +19,7 @@ public class ResultFormatter {
             table.append("| ").append(columnName).append(" ");
         }
         table.append("|\n");
-        for (int i = 0; i < queryColumns.size(); i++) {
-            table.append("|:---:");
-        }
+        table.append("|:---:".repeat(queryColumns.size()));
         table.append("|\n");
         if (queryResults == null) {
             return table.toString();

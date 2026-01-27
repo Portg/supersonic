@@ -66,7 +66,7 @@ public class SqlQueryApiController {
                         log.error("querySqlReq:{},queryByReq error:", querySqlReq, e);
                         return new SemanticQueryResp();
                     }
-                })).collect(Collectors.toList());
+                })).toList();
         return futures.stream().map(CompletableFuture::join).collect(Collectors.toList());
     }
 

@@ -97,7 +97,7 @@ public class DictTaskServiceImpl implements DictTaskService {
                 .type(taskReq.getType()).build();
         List<DictItemResp> dictItemRespList = dictRepository.queryDictConf(dictItemFilter);
         if (!CollectionUtils.isEmpty(dictItemRespList)) {
-            return dictItemRespList.get(0);
+            return dictItemRespList.getFirst();
         }
         return null;
     }

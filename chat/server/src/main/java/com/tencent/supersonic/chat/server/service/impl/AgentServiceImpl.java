@@ -67,13 +67,10 @@ public class AgentServiceImpl extends ServiceImpl<AgentDOMapper, AgentDO> implem
             return true;
         }
         authType = authType == null ? AuthType.VIEWER : authType;
-        switch (authType) {
-            case ADMIN:
-                return checkAdminPermission(orgIds, user, agent);
-            case VIEWER:
-            default:
-                return checkViewPermission(orgIds, user, agent);
-        }
+        return switch (authType) {
+            case ADMIN -> checkAdminPermission(orgIds, user, agent);
+            default -> checkViewPermission(orgIds, user, agent);
+        };
     }
 
     @Override
@@ -132,7 +129,7 @@ public class AgentServiceImpl extends ServiceImpl<AgentDOMapper, AgentDO> implem
         ChatMemoryFilter chatMemoryFilter =
                 ChatMemoryFilter.builder().agentId(agent.getId()).questions(examples).build();
         List<String> memoriesExisted = memoryService.getMemories(chatMemoryFilter).stream()
-                .map(ChatMemory::getQuestion).collect(Collectors.toList());
+                .map(ChatMemory::getQuestion).toList();
         for (String example : examples) {
             if (memoriesExisted.contains(example)) {
                 continue;

@@ -131,7 +131,7 @@ public class FlightServiceImpl extends BasicFlightSqlProducer implements FlightS
                     .setStatementHandle(preparedStatementHandle).build();
             return getFlightInfoForSchema(ticket, descriptor, null);
         } catch (Exception e) {
-            log.error("getFlightInfoStatement error {}", e);
+            log.error("getFlightInfoStatement error {}", e.getMessage());
         }
         return null;
     }
@@ -155,18 +155,23 @@ public class FlightServiceImpl extends BasicFlightSqlProducer implements FlightS
         }
         executorService.submit(() -> {
             try (BufferAllocator rootAllocator = new RootAllocator()) {
-                Optional<Param> authOpt = semanticQueryReq.getParams().stream()
-                        .filter(p -> p.getName().equals(authenticationConfig.getTokenHttpHeaderKey())).findFirst();
+                Optional<Param> authOpt = semanticQueryReq.getParams().stream().filter(
+                        p -> p.getName().equals(authenticationConfig.getTokenHttpHeaderKey()))
+                        .findFirst();
                 if (authOpt.isPresent()) {
                     User user = UserHolder.findUser(authOpt.get().getValue(),
                             authenticationConfig.getTokenHttpHeaderAppKey());
                     SemanticQueryResp resp = queryService.queryByReq(semanticQueryReq, user);
-                    ResultSet resultSet = semanticQueryRespToResultSet(resp, semanticQueryReq.getDataSetId());
-                    final Schema schema = jdbcToArrowSchema(resultSet.getMetaData(), defaultCalendar);
-                    try (final VectorSchemaRoot vectorSchemaRoot = VectorSchemaRoot.create(schema, rootAllocator)) {
+                    ResultSet resultSet =
+                            semanticQueryRespToResultSet(resp, semanticQueryReq.getDataSetId());
+                    final Schema schema =
+                            jdbcToArrowSchema(resultSet.getMetaData(), defaultCalendar);
+                    try (final VectorSchemaRoot vectorSchemaRoot =
+                            VectorSchemaRoot.create(schema, rootAllocator)) {
                         final VectorLoader loader = new VectorLoader(vectorSchemaRoot);
                         listener.start(vectorSchemaRoot);
-                        final ArrowVectorIterator iterator = sqlToArrowVectorIterator(resultSet, rootAllocator);
+                        final ArrowVectorIterator iterator =
+                                sqlToArrowVectorIterator(resultSet, rootAllocator);
                         while (iterator.hasNext()) {
                             final VectorSchemaRoot batch = iterator.next();
                             if (batch.getRowCount() == 0) {
@@ -182,8 +187,10 @@ public class FlightServiceImpl extends BasicFlightSqlProducer implements FlightS
                     }
                 }
             } catch (Exception e) {
-                listener.error(CallStatus.INTERNAL.withDescription(
-                        String.format("Failed to get exec statement %s", e.getMessage())).toRuntimeException());
+                listener.error(CallStatus.INTERNAL
+                        .withDescription(
+                                String.format("Failed to get exec statement %s", e.getMessage()))
+                        .toRuntimeException());
                 log.error("getStreamPreparedStatement error {}", hander);
             } finally {
                 preparedStatementCache.invalidate(hander);

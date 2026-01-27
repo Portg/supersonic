@@ -171,7 +171,7 @@ public class Text2SQLEval extends BaseTest {
         chatModel.setName("Text2SQL LLM");
         chatModel.setConfig(LLMConfigUtils.getLLMConfig(llmType));
         chatModel = chatModelService.createChatModel(chatModel, User.getDefaultUser());
-        Integer chatModelId = chatModel.getId();
+        Integer chatModelId = chatModel.getId().intValue();
         // configure chat apps
         Map<String, ChatApp> chatAppConfig =
                 Maps.newHashMap(ChatAppManager.getAllApps(AppModule.CHAT));

@@ -28,10 +28,9 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-pnpm link --global
-
 cd ../supersonic-fe
 
+# 使用相对路径 link，避免全局目录问题
 pnpm link ../chat-sdk
 
 pnpm i

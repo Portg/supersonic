@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.tencent.supersonic.common.config.SystemConfig;
+import com.tencent.supersonic.common.context.TenantContext;
 import com.tencent.supersonic.common.persistence.dataobject.SystemConfigDO;
 import com.tencent.supersonic.common.persistence.mapper.SystemConfigMapper;
 import com.tencent.supersonic.common.pojo.Parameter;
@@ -15,38 +16,42 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class SystemConfigServiceImpl extends ServiceImpl<SystemConfigMapper, SystemConfigDO>
         implements SystemConfigService {
 
+    private static final Long DEFAULT_TENANT_ID = 1L;
+
     @Autowired
     private Environment environment;
 
-    // Cache field to store the system configuration
-    private AtomicReference<SystemConfig> cachedSystemConfig = new AtomicReference<>();
+    // Cache field to store the system configuration per tenant
+    private Map<Long, SystemConfig> tenantConfigCache = new ConcurrentHashMap<>();
 
     @Override
     public SystemConfig getSystemConfig() {
-        SystemConfig cachedConfig = cachedSystemConfig.get();
+        Long tenantId = TenantContext.getTenantIdOrDefault(DEFAULT_TENANT_ID);
+        SystemConfig cachedConfig = tenantConfigCache.get(tenantId);
         if (cachedConfig != null) {
             return cachedConfig;
         }
-        SystemConfig systemConfigDb = getSystemConfigFromDB();
-        cachedSystemConfig.set(systemConfigDb);
+        SystemConfig systemConfigDb = getSystemConfigFromDB(tenantId);
+        tenantConfigCache.put(tenantId, systemConfigDb);
         return systemConfigDb;
     }
 
-    private SystemConfig getSystemConfigFromDB() { // 加上id ，如果有多条记录，会出错
-        List<SystemConfigDO> list = this.lambdaQuery().eq(SystemConfigDO::getId, 1).list();
+    private SystemConfig getSystemConfigFromDB(Long tenantId) {
+        List<SystemConfigDO> list =
+                this.lambdaQuery().eq(SystemConfigDO::getTenantId, tenantId).list();
         if (CollectionUtils.isEmpty(list)) {
             SystemConfig systemConfig = new SystemConfig();
-            systemConfig.setId(1);
+            systemConfig.setTenantId(tenantId);
             systemConfig.init();
             // use system property to initialize system parameter
-            systemConfig.getParameters().stream().forEach(p -> {
+            systemConfig.getParameters().forEach(p -> {
                 if (environment.containsProperty(p.getName())) {
                     p.setValue(environment.getProperty(p.getName()));
                 }
@@ -55,19 +60,43 @@ public class SystemConfigServiceImpl extends ServiceImpl<SystemConfigMapper, Sys
             return systemConfig;
         }
 
-        return convert(list.iterator().next());
+        return convert(list.getFirst());
     }
 
     @Override
     public void save(SystemConfig sysConfig) {
+        Long tenantId = sysConfig.getTenantId();
+        if (tenantId == null) {
+            tenantId = TenantContext.getTenantIdOrDefault(DEFAULT_TENANT_ID);
+            sysConfig.setTenantId(tenantId);
+        }
         SystemConfigDO systemConfigDO = convert(sysConfig);
         saveOrUpdate(systemConfigDO);
-        cachedSystemConfig.set(sysConfig);
+        tenantConfigCache.put(tenantId, sysConfig);
+    }
+
+    /**
+     * Clears the cache for a specific tenant.
+     *
+     * @param tenantId the tenant ID to clear cache for
+     */
+    public void clearCache(Long tenantId) {
+        if (tenantId != null) {
+            tenantConfigCache.remove(tenantId);
+        }
+    }
+
+    /**
+     * Clears all tenant caches.
+     */
+    public void clearAllCache() {
+        tenantConfigCache.clear();
     }
 
     private SystemConfig convert(SystemConfigDO systemConfigDO) {
         SystemConfig sysParameter = new SystemConfig();
         sysParameter.setId(systemConfigDO.getId());
+        sysParameter.setTenantId(systemConfigDO.getTenantId());
         List<Parameter> parameters = JsonUtil.toObject(systemConfigDO.getParameters(),
                 new TypeReference<List<Parameter>>() {});
         sysParameter.setParameters(parameters);
@@ -78,6 +107,7 @@ public class SystemConfigServiceImpl extends ServiceImpl<SystemConfigMapper, Sys
     private SystemConfigDO convert(SystemConfig sysParameter) {
         SystemConfigDO sysParameterDO = new SystemConfigDO();
         sysParameterDO.setId(sysParameter.getId());
+        sysParameterDO.setTenantId(sysParameter.getTenantId());
         sysParameterDO.setParameters(JSONObject.toJSONString(sysParameter.getParameters()));
         sysParameterDO.setAdmin(sysParameter.getAdmin());
         return sysParameterDO;

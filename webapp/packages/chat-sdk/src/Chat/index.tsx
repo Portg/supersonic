@@ -40,6 +40,7 @@ type Props = {
   isCopilot?: boolean;
   onCurrentAgentChange?: (agent?: AgentType) => void;
   onReportMsgEvent?: (msg: string, valid: boolean) => void;
+  onAddAgent?: () => void;
 };
 
 const Chat: ForwardRefRenderFunction<any, Props> = (
@@ -54,6 +55,7 @@ const Chat: ForwardRefRenderFunction<any, Props> = (
     isCopilot,
     onCurrentAgentChange,
     onReportMsgEvent,
+    onAddAgent,
   },
   ref
 ) => {
@@ -391,6 +393,7 @@ const Chat: ForwardRefRenderFunction<any, Props> = (
               agentList={agentList}
               currentAgent={currentAgent}
               onSelectAgent={onSelectAgent}
+              onAddAgent={onAddAgent}
             />
           )}
           <div className={styles.chatApp}>

@@ -147,7 +147,8 @@ public class ChatQueryRepositoryImpl implements ChatQueryRepository {
         chatQueryDO.setCreateTime(new java.util.Date());
         chatQueryDO.setUserName(chatParseReq.getUser().getName());
         chatQueryDO.setQueryText(chatParseReq.getQueryText());
-        chatQueryDO.setAgentId(chatParseReq.getAgentId());
+        chatQueryDO.setAgentId(
+                chatParseReq.getAgentId() != null ? chatParseReq.getAgentId().longValue() : null);
         chatQueryDO.setQueryResult("{}");
         chatQueryDO.setQueryState(1);
         try {

@@ -64,7 +64,7 @@ public class CustomExpressionDeParser extends ExpressionDeParser {
     }
 
     private boolean shouldSkip(IsNullExpression isNullExpression) {
-        if (isNullExpression.getLeftExpression() instanceof Column column) {
+        if (isNullExpression.getLeftExpression()instanceof Column column) {
             String columnName = column.getColumnName();
             // Add your target column names here
             if (removeFieldNames.contains(columnName)) {

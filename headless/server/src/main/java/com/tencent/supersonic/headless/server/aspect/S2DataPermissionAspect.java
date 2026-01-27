@@ -6,6 +6,7 @@ import com.tencent.supersonic.auth.api.authorization.pojo.DimensionFilter;
 import com.tencent.supersonic.auth.api.authorization.request.QueryAuthResReq;
 import com.tencent.supersonic.auth.api.authorization.response.AuthorizedResourceResp;
 import com.tencent.supersonic.auth.api.authorization.service.AuthService;
+import com.tencent.supersonic.common.config.SensitiveLevelConfig;
 import com.tencent.supersonic.common.jsqlparser.SqlAddHelper;
 import com.tencent.supersonic.common.jsqlparser.SqlReplaceHelper;
 import com.tencent.supersonic.common.pojo.Filter;
@@ -24,6 +25,7 @@ import com.tencent.supersonic.headless.api.pojo.request.SemanticQueryReq;
 import com.tencent.supersonic.headless.api.pojo.response.ModelResp;
 import com.tencent.supersonic.headless.api.pojo.response.SemanticQueryResp;
 import com.tencent.supersonic.headless.api.pojo.response.SemanticSchemaResp;
+import com.tencent.supersonic.headless.server.service.DataSetAuthService;
 import com.tencent.supersonic.headless.server.service.ModelService;
 import com.tencent.supersonic.headless.server.service.SchemaService;
 import com.tencent.supersonic.headless.server.utils.QueryStructUtils;
@@ -62,6 +64,10 @@ public class S2DataPermissionAspect {
     private SchemaService schemaService;
     @Autowired
     private AuthService authService;
+    @Autowired
+    private DataSetAuthService dataSetAuthService;
+    @Autowired
+    private SensitiveLevelConfig sensitiveLevelConfig;
 
     @Pointcut("@annotation(com.tencent.supersonic.headless.server.annotation.S2DataPermission)")
     private void s2PermissionCheck() {}
@@ -70,12 +76,10 @@ public class S2DataPermissionAspect {
     public Object doAround(ProceedingJoinPoint joinPoint) throws Throwable {
         // 1. check args
         Object[] objects = joinPoint.getArgs();
-        boolean needQueryData = true;
         SemanticQueryReq queryReq = null;
         if (objects[0] instanceof SemanticQueryReq) {
             queryReq = (SemanticQueryReq) objects[0];
-            if (queryReq instanceof QuerySqlReq) {
-                QuerySqlReq sqlReq = (QuerySqlReq) queryReq;
+            if (queryReq instanceof QuerySqlReq sqlReq) {
                 if (sqlReq.getDataSetName() != null) {
                     String escapedTable = SqlReplaceHelper.escapeTableName(sqlReq.getDataSetName());
                     sqlReq.setSql(sqlReq.getSql().replaceAll(
@@ -91,6 +95,7 @@ public class S2DataPermissionAspect {
             log.info("needAuth is false, there is no need to check permissions.");
             return joinPoint.proceed();
         }
+
         User user = (User) objects[1];
         if (Objects.isNull(user) || StringUtils.isEmpty(user.getName())) {
             throw new RuntimeException("please provide user information");
@@ -99,20 +104,28 @@ public class S2DataPermissionAspect {
         SemanticSchemaResp semanticSchemaResp = getSemanticSchemaResp(queryReq);
         Set<Long> modelIds = getModelIdInQuery(queryReq, semanticSchemaResp);
 
-        // 2. determine whether admin of the model
+        // 2. check DataSet level permission if dataSetId is provided
+        Long dataSetId = queryReq.getDataSetId();
+        if (dataSetId != null) {
+            if (!dataSetAuthService.checkDataSetViewPermission(dataSetId, user)) {
+                throw new InvalidPermissionException("您没有数据集权限，请联系管理员申请");
+            }
+        }
+
+        // 3. determine whether admin of the model
         if (checkModelAdmin(user, modelIds)) {
             return joinPoint.proceed();
         }
-        // 3. determine whether the model is visible to cur user
+        // 4. determine whether the model is visible to cur user
         checkModelVisible(user, modelIds);
 
-        // 4. get permissions auth to cur user
-        AuthorizedResourceResp authorizedResource = getAuthorizedResource(user, modelIds);
+        // 5. get permissions auth to cur user (combine model and dataset level)
+        AuthorizedResourceResp authorizedResource =
+                getAuthorizedResource(user, modelIds, dataSetId);
 
         // 5. check col permission
-        if (needQueryData) {
-            checkColPermission(queryReq, authorizedResource, modelIds, semanticSchemaResp);
-        }
+        checkColPermission(queryReq, authorizedResource, modelIds, semanticSchemaResp);
+
         // 6. check row permission
         checkRowPermission(queryReq, authorizedResource);
 
@@ -150,12 +163,10 @@ public class S2DataPermissionAspect {
 
     private Set<Long> getModelIdInQuery(SemanticQueryReq semanticQueryReq,
             SemanticSchemaResp semanticSchemaResp) {
-        if (semanticQueryReq instanceof QuerySqlReq) {
-            QuerySqlReq querySqlReq = (QuerySqlReq) semanticQueryReq;
+        if (semanticQueryReq instanceof QuerySqlReq querySqlReq) {
             return queryStructUtils.getModelIdFromSql(querySqlReq, semanticSchemaResp);
         }
-        if (semanticQueryReq instanceof QueryStructReq) {
-            QueryStructReq queryStructReq = (QueryStructReq) semanticQueryReq;
+        if (semanticQueryReq instanceof QueryStructReq queryStructReq) {
             return queryStructUtils.getModelIdsFromStruct(queryStructReq, semanticSchemaResp);
         }
         return Sets.newHashSet();
@@ -199,7 +210,7 @@ public class S2DataPermissionAspect {
         }
         List<String> dimensionFilters = authorizedResource.getFilters().stream()
                 .flatMap(filter -> filter.getExpressions().stream()).filter(StringUtils::isNotBlank)
-                .collect(Collectors.toList());
+                .toList();
 
         if (dimensionFilters.isEmpty()) {
             log.debug("Dimension filters are empty");
@@ -235,7 +246,7 @@ public class S2DataPermissionAspect {
         }
         List<String> dimensionFilters = authorizedResource.getFilters().stream()
                 .flatMap(filter -> filter.getExpressions().stream()).filter(StringUtils::isNotBlank)
-                .collect(Collectors.toList());
+                .toList();
 
         if (dimensionFilters.isEmpty()) {
             log.debug("dimensionFilters is empty");
@@ -271,7 +282,7 @@ public class S2DataPermissionAspect {
 
     public void checkModelVisible(User user, Set<Long> modelIds) {
         List<Long> modelListVisible = modelService.getModelListWithAuth(user, null, AuthType.VIEWER)
-                .stream().map(ModelResp::getId).collect(Collectors.toList());
+                .stream().map(ModelResp::getId).toList();
         List<Long> modelIdCopied = new ArrayList<>(modelIds);
         modelIdCopied.removeAll(modelListVisible);
         if (!CollectionUtils.isEmpty(modelIdCopied)) {
@@ -288,29 +299,90 @@ public class S2DataPermissionAspect {
         }
     }
 
+    /**
+     * Gets sensitive field names that require authorization based on configuration. HIGH level
+     * always requires auth. MID level depends on configuration.
+     */
     public Set<String> getHighSensitiveBizNamesByModelId(SemanticSchemaResp semanticSchemaResp) {
-        Set<String> highSensitiveCols = new HashSet<>();
+        Set<String> sensitiveCols = new HashSet<>();
+        boolean includeMid = sensitiveLevelConfig.isMidLevelRequireAuth();
+
         if (!CollectionUtils.isEmpty(semanticSchemaResp.getDimensions())) {
             semanticSchemaResp.getDimensions().stream()
-                    .filter(dimSchemaResp -> SensitiveLevelEnum.HIGH.getCode()
-                            .equals(dimSchemaResp.getSensitiveLevel()))
-                    .forEach(dim -> highSensitiveCols.add(dim.getBizName()));
+                    .filter(dimSchemaResp -> isRestrictedSensitiveLevel(
+                            dimSchemaResp.getSensitiveLevel(), includeMid))
+                    .forEach(dim -> sensitiveCols.add(dim.getBizName()));
         }
         if (!CollectionUtils.isEmpty(semanticSchemaResp.getMetrics())) {
             semanticSchemaResp.getMetrics().stream()
-                    .filter(metricSchemaResp -> SensitiveLevelEnum.HIGH.getCode()
-                            .equals(metricSchemaResp.getSensitiveLevel()))
-                    .forEach(metric -> highSensitiveCols.add(metric.getBizName()));
+                    .filter(metricSchemaResp -> isRestrictedSensitiveLevel(
+                            metricSchemaResp.getSensitiveLevel(), includeMid))
+                    .forEach(metric -> sensitiveCols.add(metric.getBizName()));
         }
-        return highSensitiveCols;
+
+        // Log MID level access if configured (for audit purposes)
+        if (sensitiveLevelConfig.isLogMidLevelAccess() && !includeMid) {
+            logMidLevelFieldAccess(semanticSchemaResp);
+        }
+
+        return sensitiveCols;
+    }
+
+    /**
+     * Checks if a sensitive level requires authorization.
+     */
+    private boolean isRestrictedSensitiveLevel(Integer sensitiveLevel, boolean includeMid) {
+        if (SensitiveLevelEnum.HIGH.getCode().equals(sensitiveLevel)) {
+            return true;
+        }
+        if (includeMid && SensitiveLevelEnum.MID.getCode().equals(sensitiveLevel)) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Logs access to MID level sensitive fields for audit purposes.
+     */
+    private void logMidLevelFieldAccess(SemanticSchemaResp semanticSchemaResp) {
+        Set<String> midLevelFields = new HashSet<>();
+        if (!CollectionUtils.isEmpty(semanticSchemaResp.getDimensions())) {
+            semanticSchemaResp.getDimensions().stream()
+                    .filter(dim -> SensitiveLevelEnum.MID.getCode().equals(dim.getSensitiveLevel()))
+                    .forEach(dim -> midLevelFields.add(dim.getBizName()));
+        }
+        if (!CollectionUtils.isEmpty(semanticSchemaResp.getMetrics())) {
+            semanticSchemaResp.getMetrics().stream().filter(
+                    metric -> SensitiveLevelEnum.MID.getCode().equals(metric.getSensitiveLevel()))
+                    .forEach(metric -> midLevelFields.add(metric.getBizName()));
+        }
+        if (!midLevelFields.isEmpty()) {
+            log.info("MID sensitive level fields accessed: {}", midLevelFields);
+        }
     }
 
     public AuthorizedResourceResp getAuthorizedResource(User user, Set<Long> modelIds) {
+        return getAuthorizedResource(user, modelIds, null);
+    }
+
+    public AuthorizedResourceResp getAuthorizedResource(User user, Set<Long> modelIds,
+            Long dataSetId) {
         QueryAuthResReq queryAuthResReq = new QueryAuthResReq();
         queryAuthResReq.setModelIds(new ArrayList<>(modelIds));
         AuthorizedResourceResp authorizedResource = fetchAuthRes(queryAuthResReq, user);
-        log.info("user:{}, domainId:{}, after queryAuthorizedResources:{}", user.getName(),
-                modelIds, authorizedResource);
+
+        // Merge DataSet level authorization if dataSetId is provided
+        if (dataSetId != null) {
+            AuthorizedResourceResp dataSetAuthResource =
+                    dataSetAuthService.queryAuthorizedResources(dataSetId, user);
+            if (dataSetAuthResource != null) {
+                authorizedResource.getAuthResList().addAll(dataSetAuthResource.getAuthResList());
+                authorizedResource.getFilters().addAll(dataSetAuthResource.getFilters());
+            }
+        }
+
+        log.info("user:{}, modelIds:{}, dataSetId:{}, after queryAuthorizedResources:{}",
+                user.getName(), modelIds, dataSetId, authorizedResource);
         return authorizedResource;
     }
 
@@ -331,7 +403,7 @@ public class S2DataPermissionAspect {
             ModelResp modelResp = modelService.getModel(modelIds.iterator().next());
             List<String> exprList = new ArrayList<>();
             List<String> descList = new ArrayList<>();
-            filters.stream().forEach(filter -> {
+            filters.forEach(filter -> {
                 if (StringUtils.isNotEmpty(filter.getDescription())) {
                     descList.add(filter.getDescription());
                 }

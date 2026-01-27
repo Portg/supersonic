@@ -103,7 +103,7 @@ public class SemanticSqlDialect extends SqlDialect {
         if (operator instanceof SqlMonotonicBinaryOperator
                 && call.getKind().equals(SqlKind.TIMES)) {
             if (call.getOperandList() != null && call.getOperandList().size() == 2
-                    && call.getOperandList().get(1) instanceof SqlIntervalLiteral intervalOperand) {
+                    && call.getOperandList().get(1)instanceof SqlIntervalLiteral intervalOperand) {
                 SqlIntervalLiteral.IntervalValue interval =
                         (SqlIntervalLiteral.IntervalValue) intervalOperand.getValue();
                 call.setOperand(1, SqlNumericLiteral.createExactNumeric(interval.toString(),

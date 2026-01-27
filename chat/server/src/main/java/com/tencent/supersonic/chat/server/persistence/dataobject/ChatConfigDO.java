@@ -28,10 +28,18 @@ public class ChatConfigDO {
 
     private String llmExamples;
 
-    /** record info */
+    /** 租户ID */
+    private Long tenantId;
+
+    /** 创建人 */
     private String createdBy;
 
+    /** 更新人 */
     private String updatedBy;
+
+    /** 创建时间 */
     private Date createdAt;
+
+    /** 更新时间 */
     private Date updatedAt;
 }

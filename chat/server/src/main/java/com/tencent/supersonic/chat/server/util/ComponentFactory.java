@@ -14,11 +14,11 @@ import java.util.List;
 
 @Slf4j
 public class ComponentFactory {
-    private static List<ParseResultProcessor> parseProcessors = new ArrayList<>();
-    private static List<ExecuteResultProcessor> executeProcessors = new ArrayList<>();
-    private static List<ChatQueryParser> chatQueryParsers = new ArrayList<>();
-    private static List<ChatQueryExecutor> chatQueryExecutors = new ArrayList<>();
-    private static List<PluginRecognizer> pluginRecognizers = new ArrayList<>();
+    private static final List<ParseResultProcessor> parseProcessors = new ArrayList<>();
+    private static final List<ExecuteResultProcessor> executeProcessors = new ArrayList<>();
+    private static final List<ChatQueryParser> chatQueryParsers = new ArrayList<>();
+    private static final List<ChatQueryExecutor> chatQueryExecutors = new ArrayList<>();
+    private static final List<PluginRecognizer> pluginRecognizers = new ArrayList<>();
 
     public static List<ParseResultProcessor> getParseProcessors() {
         return CollectionUtils.isEmpty(parseProcessors)

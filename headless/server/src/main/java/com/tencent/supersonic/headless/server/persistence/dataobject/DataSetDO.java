@@ -41,4 +41,13 @@ public class DataSetDO {
     private String admin;
 
     private String adminOrg;
+
+    private String viewer;
+
+    private String viewOrg;
+
+    private Integer isOpen;
+
+    /** 租户ID */
+    private Long tenantId;
 }

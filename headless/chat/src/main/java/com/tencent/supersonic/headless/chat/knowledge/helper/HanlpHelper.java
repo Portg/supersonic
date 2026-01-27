@@ -247,8 +247,9 @@ public class HanlpHelper {
             for (String nature : hanlpMapResult.getNatures()) {
                 String orig = attribute.getOriginal(Nature.fromString(nature));
                 if (orig != null) {
-                    MapResult addMapResult = new HanlpMapResult(orig, Collections.singletonList(nature),
-                            hanlpMapResult.getDetectWord(), hanlpMapResult.getSimilarity());
+                    MapResult addMapResult =
+                            new HanlpMapResult(orig, Collections.singletonList(nature),
+                                    hanlpMapResult.getDetectWord(), hanlpMapResult.getSimilarity());
                     mapResults.add((T) addMapResult);
                     isAdd = true;
                 }

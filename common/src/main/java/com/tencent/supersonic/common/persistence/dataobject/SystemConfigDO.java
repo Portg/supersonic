@@ -9,9 +9,11 @@ import lombok.Data;
 @TableName("s2_system_config")
 public class SystemConfigDO {
     @TableId(type = IdType.AUTO)
-    private Integer id;
+    private Long id;
 
     private String parameters;
 
     private String admin;
+
+    private Long tenantId;
 }

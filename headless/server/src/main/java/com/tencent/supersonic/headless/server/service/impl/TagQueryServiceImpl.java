@@ -98,7 +98,7 @@ public class TagQueryServiceImpl implements TagQueryService {
         }
 
         // query date info from db
-        String endDate = queryTagDateFromDbBySql(timeDimension.get(0), tag, itemValueReq, user);
+        String endDate = queryTagDateFromDbBySql(timeDimension.getFirst(), tag, itemValueReq, user);
         DateConf dateConf = new DateConf();
         dateConf.setDateMode(DateConf.DateMode.BETWEEN);
         dateConf.setStartDate(endDate);
@@ -120,13 +120,13 @@ public class TagQueryServiceImpl implements TagQueryService {
 
         // 添加时间过滤信息
         log.info("[queryTagDateFromDbBySql] calculate the maximum time start");
-        if (Objects.nonNull(itemValueReq) && itemValueReq.getDateConf().getUnit() > 1) {
+        if (itemValueReq.getDateConf().getUnit() > 1) {
             ModelResp model = modelService.getModel(tag.getModelId());
             if (Objects.nonNull(model)) {
                 List<Dimension> timeDims = model.getTimeDimension();
                 if (!CollectionUtils.isEmpty(timeDims)) {
-                    String dateFormat = timeDims.get(0).getDateFormat();
-                    if (StringUtils.isEmpty(dateFormat)) {
+                    String dateFormat = timeDims.getFirst().getDateFormat();
+                    if (!StringUtils.hasLength(dateFormat)) {
                         dateFormat = itemValueDateFormat;
                     }
                     String start = LocalDate.now().minusDays(itemValueReq.getDateConf().getUnit())
@@ -144,19 +144,21 @@ public class TagQueryServiceImpl implements TagQueryService {
         modelIds.add(tag.getModelId());
         QuerySqlReq querySqlReq = new QuerySqlReq();
         querySqlReq.setSql(sql);
+        // SECURITY: Auth bypass is safe here - this is an internal system query
+        // to get max date for tag value calculation, not exposing user data
         querySqlReq.setNeedAuth(false);
         querySqlReq.setModelIds(modelIds);
         log.info("queryTagDateFromDbBySql, QuerySqlReq:{}", querySqlReq.toCustomizedString());
         try {
             SemanticQueryResp semanticQueryResp = queryService.queryByReq(querySqlReq, user);
             if (!CollectionUtils.isEmpty(semanticQueryResp.getResultList())) {
-                Object date = semanticQueryResp.getResultList().get(0).get(maxDateAlias);
+                Object date = semanticQueryResp.getResultList().getFirst().get(maxDateAlias);
                 if (Objects.nonNull(date)) {
                     return date.toString();
                 }
             }
         } catch (Exception e) {
-            log.warn("queryTagDateFromDbBySql date info e, e:{}", e);
+            log.warn("queryTagDateFromDbBySql date info e, e:{}", e.getMessage());
         }
         String dateDefault = queryTagDate(dim);
         log.info("queryTagDate by default, dateDefault:{}.", dateDefault);
@@ -172,6 +174,8 @@ public class TagQueryServiceImpl implements TagQueryService {
         modelIds.add(tag.getModelId());
         QuerySqlReq querySqlReq = new QuerySqlReq();
         querySqlReq.setSql(sql);
+        // SECURITY: Auth bypass is safe here - this is an internal system query
+        // for tag total count aggregation, returns only count not actual data
         querySqlReq.setNeedAuth(false);
         querySqlReq.setModelIds(modelIds);
 
@@ -222,6 +226,8 @@ public class TagQueryServiceImpl implements TagQueryService {
         modelIds.add(tag.getModelId());
         QuerySqlReq querySqlReq = new QuerySqlReq();
         querySqlReq.setSql(sql);
+        // SECURITY: Auth bypass is safe here - this is an internal system query
+        // for tag value distribution, aggregated data only (group by + count)
         querySqlReq.setNeedAuth(false);
         querySqlReq.setModelIds(modelIds);
         return querySqlReq;

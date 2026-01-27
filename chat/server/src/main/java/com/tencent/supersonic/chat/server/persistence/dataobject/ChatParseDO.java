@@ -1,11 +1,16 @@
 package com.tencent.supersonic.chat.server.persistence.dataobject;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
 import lombok.Data;
 
 import java.util.Date;
 
 @Data
 public class ChatParseDO {
+
+    @TableId(type = IdType.AUTO)
+    private Long id;
 
     private Long questionId;
 

@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class EmbeddingServiceImpl implements EmbeddingService {
 
-    private Cache<String, Boolean> cache = CacheBuilder.newBuilder().maximumSize(10000)
+    private final Cache<String, Boolean> cache = CacheBuilder.newBuilder().maximumSize(10000)
             .expireAfterWrite(10, TimeUnit.HOURS).build();
 
     @Override

@@ -189,7 +189,7 @@ public class ChatQueryServiceImpl implements ChatQueryService {
         }
         ChatExecuteReq executeReq = new ChatExecuteReq();
         executeReq.setQueryId(parseResp.getQueryId());
-        executeReq.setParseId(parseResp.getSelectedParses().get(0).getId());
+        executeReq.setParseId(parseResp.getSelectedParses().getFirst().getId());
         executeReq.setQueryText(chatParseReq.getQueryText());
         executeReq.setChatId(chatParseReq.getChatId());
         executeReq.setUser(User.getDefaultUser());
@@ -289,9 +289,8 @@ public class ChatQueryServiceImpl implements ChatQueryService {
         if (CollectionUtils.isEmpty(oriFields) || CollectionUtils.isEmpty(metrics)) {
             return false;
         }
-        List<String> metricNames =
-                metrics.stream().map(SchemaElement::getName).collect(Collectors.toList());
-        return !oriFields.containsAll(metricNames);
+        List<String> metricNames = metrics.stream().map(SchemaElement::getName).toList();
+        return !new HashSet<>(oriFields).containsAll(metricNames);
     }
 
     private String replaceFilters(ChatQueryDataReq queryData, SemanticParseInfo parseInfo,
@@ -340,7 +339,7 @@ public class ChatQueryServiceImpl implements ChatQueryService {
         log.info("filteredMetrics:{},metrics:{}", oriMetrics, metric);
         Map<String, Pair<String, String>> fieldMap = new HashMap<>();
         if (!CollectionUtils.isEmpty(oriMetrics) && !oriMetrics.contains(metric.getName())) {
-            fieldMap.put(oriMetrics.get(0), Pair.of(metric.getName(), metric.getDefaultAgg()));
+            fieldMap.put(oriMetrics.getFirst(), Pair.of(metric.getName(), metric.getDefaultAgg()));
             correctorSql = SqlReplaceHelper.replaceAggFields(correctorSql, fieldMap);
         }
         log.info("after replaceMetrics:{}", correctorSql);
@@ -467,7 +466,8 @@ public class ChatQueryServiceImpl implements ChatQueryService {
     private void addWhereInFilters(QueryFilter dslQueryFilter, InExpression inExpression,
             Set<QueryFilter> contextMetricFilters, List<Expression> addConditions) {
         Column column = new Column(dslQueryFilter.getName());
-        ParenthesedExpressionList parenthesedExpressionList = new ParenthesedExpressionList<>();
+        ParenthesedExpressionList<Expression> parenthesedExpressionList =
+                new ParenthesedExpressionList<>();
         List<String> valueList =
                 JsonUtil.toList(JsonUtil.toString(dslQueryFilter.getValue()), String.class);
         if (CollectionUtils.isEmpty(valueList)) {

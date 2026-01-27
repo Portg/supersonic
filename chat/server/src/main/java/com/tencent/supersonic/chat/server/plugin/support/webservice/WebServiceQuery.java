@@ -1,13 +1,13 @@
-package com.tencent.supersonic.chat.server.plugin.build.webservice;
+package com.tencent.supersonic.chat.server.plugin.support.webservice;
 
 import com.alibaba.fastjson.JSON;
 import com.tencent.supersonic.chat.api.pojo.response.QueryResult;
 import com.tencent.supersonic.chat.server.plugin.ChatPlugin;
 import com.tencent.supersonic.chat.server.plugin.PluginParseResult;
 import com.tencent.supersonic.chat.server.plugin.PluginQueryManager;
-import com.tencent.supersonic.chat.server.plugin.build.ParamOption;
-import com.tencent.supersonic.chat.server.plugin.build.PluginSemanticQuery;
-import com.tencent.supersonic.chat.server.plugin.build.WebBase;
+import com.tencent.supersonic.chat.server.plugin.support.ParamOption;
+import com.tencent.supersonic.chat.server.plugin.support.PluginSemanticQuery;
+import com.tencent.supersonic.chat.server.plugin.support.WebBase;
 import com.tencent.supersonic.common.pojo.Constants;
 import com.tencent.supersonic.common.pojo.QueryColumn;
 import com.tencent.supersonic.common.util.ContextUtils;

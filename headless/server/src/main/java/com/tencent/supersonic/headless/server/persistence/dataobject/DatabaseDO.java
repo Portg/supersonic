@@ -232,4 +232,17 @@ public class DatabaseDO {
     public void setConfig(String config) {
         this.config = config == null ? null : config.trim();
     }
+
+    /** 租户ID */
+    private Long tenantId;
+
+    /** @return tenantId */
+    public Long getTenantId() {
+        return tenantId;
+    }
+
+    /** @param tenantId */
+    public void setTenantId(Long tenantId) {
+        this.tenantId = tenantId;
+    }
 }

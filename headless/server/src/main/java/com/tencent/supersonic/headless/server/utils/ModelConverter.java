@@ -272,8 +272,8 @@ public class ModelConverter {
         if (CollectionUtils.isEmpty(identifies)) {
             return dimensionReqs;
         }
-        dimensionReqs.addAll(identifies.stream().map(identify -> convert(identify, modelDO))
-                .collect(Collectors.toList()));
+        dimensionReqs
+                .addAll(identifies.stream().map(identify -> convert(identify, modelDO)).toList());
         return dimensionReqs;
     }
 

@@ -52,4 +52,10 @@ public class DomainDO {
 
     /** 主题域可用组织 */
     private String viewOrg;
+
+    /** 租户ID */
+    private Long tenantId;
+
+    /** 主题域实体信息 */
+    private String entity;
 }

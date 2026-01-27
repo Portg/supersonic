@@ -96,9 +96,7 @@ public class StatRepositoryImpl implements StatRepository {
             Long dataSetId) {
         if (StringUtils.isNotEmpty(dimensions)) {
             try {
-                List<String> dimensionList =
-                        mapper.readValue(dimensions, new TypeReference<>() {
-                        });
+                List<String> dimensionList = mapper.readValue(dimensions, new TypeReference<>() {});
                 dimensionList.forEach(dimension -> {
                     String key = dataSetId + AT_SYMBOL + AT_SYMBOL + type + AT_SYMBOL + AT_SYMBOL
                             + dimension;

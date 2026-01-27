@@ -180,8 +180,8 @@ public class MetricRatioCalcProcessor implements ExecuteResultProcessor {
         }
         String ratio = "";
         if (Objects.nonNull(result.get(valueField))) {
-            ratio = String.format("%.2f", (Double.parseDouble(result.get(valueField).toString()) * 100))
-                    + "%";
+            ratio = String.format("%.2f",
+                    (Double.parseDouble(result.get(valueField).toString()) * 100)) + "%";
         }
         String statisticsRollName = RatioOverType.DAY_ON_DAY.getShowName();
         String statisticsOverName = RatioOverType.WEEK_ON_DAY.getShowName();

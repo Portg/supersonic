@@ -11,8 +11,8 @@ import com.tencent.supersonic.chat.server.agent.DatasetTool;
 import com.tencent.supersonic.chat.server.agent.ToolConfig;
 import com.tencent.supersonic.chat.server.plugin.ChatPlugin;
 import com.tencent.supersonic.chat.server.plugin.PluginParseConfig;
-import com.tencent.supersonic.chat.server.plugin.build.WebBase;
-import com.tencent.supersonic.chat.server.plugin.build.webservice.WebServiceQuery;
+import com.tencent.supersonic.chat.server.plugin.support.WebBase;
+import com.tencent.supersonic.chat.server.plugin.support.webservice.WebServiceQuery;
 import com.tencent.supersonic.common.pojo.ChatApp;
 import com.tencent.supersonic.common.pojo.JoinCondition;
 import com.tencent.supersonic.common.pojo.ModelRela;
@@ -129,7 +129,7 @@ public class S2VisitsDemo extends S2BaseDemo {
         // configure chat apps
         Map<String, ChatApp> chatAppConfig =
                 Maps.newHashMap(ChatAppManager.getAllApps(AppModule.CHAT));
-        chatAppConfig.values().forEach(app -> app.setChatModelId(demoChatModel.getId()));
+        chatAppConfig.values().forEach(app -> app.setChatModelId(demoChatModel.getId().intValue()));
         agent.setChatAppConfig(chatAppConfig);
         agent.setAdmins(Lists.newArrayList("tom"));
         agent.setViewers(Lists.newArrayList("alice", "jack"));

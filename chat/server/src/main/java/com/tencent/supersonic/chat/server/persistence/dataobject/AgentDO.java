@@ -23,6 +23,9 @@ public class AgentDO {
 
     private String examples;
 
+    /** LLM模型名称 */
+    private String model;
+
     private String createdBy;
 
     private Date createdAt;
@@ -37,6 +40,9 @@ public class AgentDO {
 
     private String toolConfig;
 
+    /** LLM配置JSON */
+    private String llmConfig;
+
     private String chatModelConfig;
 
     private String visualConfig;
@@ -50,4 +56,7 @@ public class AgentDO {
     private String viewOrg;
 
     private Integer isOpen;
+
+    /** Tenant ID for multi-tenancy */
+    private Long tenantId;
 }

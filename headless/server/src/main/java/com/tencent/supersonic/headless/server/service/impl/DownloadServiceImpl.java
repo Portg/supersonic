@@ -31,6 +31,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.*;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -45,11 +46,11 @@ public class DownloadServiceImpl implements DownloadService {
 
     private static final String dateFormat = "yyyyMMddHHmmss";
 
-    private MetricService metricService;
+    private final MetricService metricService;
 
-    private DimensionService dimensionService;
+    private final DimensionService dimensionService;
 
-    private SemanticLayerService queryService;
+    private final SemanticLayerService queryService;
 
     public DownloadServiceImpl(MetricService metricService, DimensionService dimensionService,
             SemanticLayerService queryService) {
@@ -114,7 +115,7 @@ public class DownloadServiceImpl implements DownloadService {
             if (CollectionUtils.isEmpty(metrics)) {
                 continue;
             }
-            MetricResp metricResp = metrics.get(0);
+            MetricResp metricResp = metrics.getFirst();
             List<DimensionResp> dimensions = getMetricRelaDimensions(metricResp, dimensionRespMap);
             for (MetricResp metric : metrics) {
                 try {
@@ -192,7 +193,7 @@ public class DownloadServiceImpl implements DownloadService {
         for (Map<String, Object> map : dataTransformed) {
             List<String> row = Lists.newArrayList();
             for (List<String> header : headers) {
-                String head = header.get(0);
+                String head = header.getFirst();
                 if (internMetricCol.equals(head)) {
                     continue;
                 }
@@ -214,7 +215,7 @@ public class DownloadServiceImpl implements DownloadService {
         List<QueryColumn> metricColumns = queryResult.getMetricColumns();
         List<QueryColumn> dimensionColumns = queryResult.getDimensionColumns();
         if (isTransform && !CollectionUtils.isEmpty(metricColumns)) {
-            QueryColumn metric = metricColumns.get(0);
+            QueryColumn metric = metricColumns.getFirst();
             List<String> groups = queryStructReq.getGroups();
             List<Map<String, Object>> dataTransformed =
                     DataTransformUtils.transform(queryResult.getResultList(), metric.getBizName(),
@@ -240,7 +241,7 @@ public class DownloadServiceImpl implements DownloadService {
         QueryStructReq queryStructReq = new QueryStructReq();
         queryStructReq.setGroups(dimensionResps.stream().map(DimensionResp::getBizName)
                 .collect(Collectors.toList()));
-        queryStructReq.getGroups().add(0, dateConf.getDateField());
+        queryStructReq.getGroups().addFirst(dateConf.getDateField());
         Aggregator aggregator = new Aggregator();
         aggregator.setColumn(metricResp.getBizName());
         queryStructReq.setAggregators(Lists.newArrayList(aggregator));
@@ -284,7 +285,7 @@ public class DownloadServiceImpl implements DownloadService {
             response.reset();
             response.setCharacterEncoding("UTF-8");
             response.addHeader("Content-Disposition",
-                    "attachment;filename=" + URLEncoder.encode(filename, "UTF-8"));
+                    "attachment;filename=" + URLEncoder.encode(filename, StandardCharsets.UTF_8));
             response.addHeader("Content-Length", "" + file.length());
             try (OutputStream outputStream = new BufferedOutputStream(response.getOutputStream())) {
                 response.setContentType("application/octet-stream");

@@ -13,6 +13,7 @@ import queryString from 'query-string';
 import { AUTH_TOKEN_KEY } from '@/common/constants';
 
 export const TOKEN_KEY = AUTH_TOKEN_KEY;
+export const TENANT_ID_KEY = 'X-Tenant-Id';
 
 const authHeaderInterceptor = (url: string, options: RequestOptionsInit) => {
   const headers: any = {};
@@ -24,6 +25,12 @@ const authHeaderInterceptor = (url: string, options: RequestOptionsInit) => {
     headers.Authorization = `Bearer ${token}`;
     headers.auth = `Bearer ${token}`;
     localStorage.setItem(TOKEN_KEY, token);
+  }
+
+  // Add tenant ID header for multi-tenancy support
+  const tenantId = localStorage.getItem(TENANT_ID_KEY);
+  if (tenantId) {
+    headers[TENANT_ID_KEY] = tenantId;
   }
 
   return {

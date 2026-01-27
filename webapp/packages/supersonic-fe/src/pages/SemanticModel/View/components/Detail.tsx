@@ -6,9 +6,10 @@ import { ISemantic } from '../../data';
 import { getAllModelByDomainId, getDataSetDetail } from '../../service';
 import DetailContainer from '@/pages/SemanticModel/components/DetailContainer';
 import DetailSider from '@/pages/SemanticModel/components/DetailContainer/DetailSider';
-import { ProjectOutlined, ConsoleSqlOutlined } from '@ant-design/icons';
+import { ProjectOutlined, ConsoleSqlOutlined, SafetyOutlined } from '@ant-design/icons';
 import DatasetCreateForm from './DatasetCreateForm';
 import DetailFormWrapper from '@/pages/SemanticModel/components/DetailContainer/DetailFormWrapper';
+import DatasetPermissionSection from '@/pages/SemanticModel/components/DatasetPermission';
 
 type Props = Record<string, any>;
 
@@ -23,6 +24,11 @@ const DataSetDetail: React.FC<Props> = () => {
       icon: <ConsoleSqlOutlined />,
       key: 'relation',
       text: '关联信息',
+    },
+    {
+      icon: <SafetyOutlined />,
+      key: 'permission',
+      text: '权限管理',
     },
   ];
   const params: any = useParams();
@@ -99,20 +105,24 @@ const DataSetDetail: React.FC<Props> = () => {
           />
         }
         containerNode={
-          <DetailFormWrapper
-            currentMenu={activeMenu}
-            onSave={() => {
-              detailFormRef.current.onSave();
-            }}
-          >
-            <DatasetCreateForm
-              ref={detailFormRef}
-              activeKey={activeMenu.key}
-              domainId={selectDomainId}
-              datasetItem={detailData}
-              modelList={modelList}
-            />
-          </DetailFormWrapper>
+          activeMenu.key === 'permission' ? (
+            <DatasetPermissionSection datasetId={Number(detailId)} />
+          ) : (
+            <DetailFormWrapper
+              currentMenu={activeMenu}
+              onSave={() => {
+                detailFormRef.current.onSave();
+              }}
+            >
+              <DatasetCreateForm
+                ref={detailFormRef}
+                activeKey={activeMenu.key}
+                domainId={selectDomainId}
+                datasetItem={detailData}
+                modelList={modelList}
+              />
+            </DetailFormWrapper>
+          )
         }
       />
     </>

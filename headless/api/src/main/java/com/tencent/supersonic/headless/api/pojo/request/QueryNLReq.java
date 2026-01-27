@@ -37,8 +37,8 @@ public class QueryNLReq extends SemanticQueryReq implements Serializable {
 
     @Override
     public String toCustomizedString() {
-        return "{" + "\"queryText\":" + dataSetId + "\"dataSetId\":" + dataSetId + "\"modelIds\":" + modelIds
-                + ",\"params\":" + params + ",\"cacheInfo\":" + cacheInfo + ",\"mapMode\":" + mapModeEnum
-                + ",\"dataType\":" + queryDataType + '}';
+        return "{" + "\"queryText\":" + dataSetId + "\"dataSetId\":" + dataSetId + "\"modelIds\":"
+                + modelIds + ",\"params\":" + params + ",\"cacheInfo\":" + cacheInfo
+                + ",\"mapMode\":" + mapModeEnum + ",\"dataType\":" + queryDataType + '}';
     }
 }

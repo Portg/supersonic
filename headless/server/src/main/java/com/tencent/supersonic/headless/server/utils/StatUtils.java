@@ -103,8 +103,7 @@ public class StatUtils {
         List<String> dimensions = queryTagReq.getGroups();
 
         List<String> metrics = new ArrayList<>();
-        queryTagReq.getAggregators()
-                .forEach(aggregator -> metrics.add(aggregator.getColumn()));
+        queryTagReq.getAggregators().forEach(aggregator -> metrics.add(aggregator.getColumn()));
         String user = getUserName(facadeUser);
 
         try {
@@ -165,8 +164,7 @@ public class StatUtils {
         List<String> dimensions = queryStructReq.getGroups();
 
         List<String> metrics = new ArrayList<>();
-        queryStructReq.getAggregators()
-                .forEach(aggregator -> metrics.add(aggregator.getColumn()));
+        queryStructReq.getAggregators().forEach(aggregator -> metrics.add(aggregator.getColumn()));
         String user = getUserName(facadeUser);
 
         try {

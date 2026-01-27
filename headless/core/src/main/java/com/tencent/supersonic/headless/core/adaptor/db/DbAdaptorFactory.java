@@ -7,7 +7,7 @@ import java.util.Map;
 
 public class DbAdaptorFactory {
 
-    private static Map<String, DbAdaptor> dbAdaptorMap;
+    private static final Map<String, DbAdaptor> dbAdaptorMap;
 
     static {
         dbAdaptorMap = new HashMap<>();

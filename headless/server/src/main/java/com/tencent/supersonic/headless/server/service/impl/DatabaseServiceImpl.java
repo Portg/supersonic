@@ -105,13 +105,10 @@ public class DatabaseServiceImpl extends ServiceImpl<DatabaseDOMapper, DatabaseD
             return true;
         }
         authType = authType == null ? AuthType.VIEWER : authType;
-        switch (authType) {
-            case ADMIN:
-                return checkAdminPermission(user, database);
-            case VIEWER:
-            default:
-                return checkViewPermission(user, database);
-        }
+        return switch (authType) {
+            case ADMIN -> checkAdminPermission(user, database);
+            default -> checkViewPermission(user, database);
+        };
     }
 
     private boolean checkAdminPermission(User user, DatabaseResp database) {
@@ -119,10 +116,7 @@ public class DatabaseServiceImpl extends ServiceImpl<DatabaseDOMapper, DatabaseD
         if (user.isSuperAdmin()) {
             return true;
         }
-        if (admins.contains(user.getName()) || database.getCreatedBy().equals(user.getName())) {
-            return true;
-        }
-        return false;
+        return admins.contains(user.getName()) || database.getCreatedBy().equals(user.getName());
     }
 
     private boolean checkViewPermission(User user, DatabaseResp database) {
@@ -131,10 +125,7 @@ public class DatabaseServiceImpl extends ServiceImpl<DatabaseDOMapper, DatabaseD
         }
         List<String> viewers = database.getViewers();
 
-        if (viewers.contains(user.getName())) {
-            return true;
-        }
-        return false;
+        return viewers.contains(user.getName());
     }
 
     @Override
@@ -149,8 +140,7 @@ public class DatabaseServiceImpl extends ServiceImpl<DatabaseDOMapper, DatabaseD
         modelFilter.setIncludesDetail(false);
         List<ModelResp> modelResps = datasourceService.getModelList(modelFilter);
         if (!CollectionUtils.isEmpty(modelResps)) {
-            List<String> datasourceNames =
-                    modelResps.stream().map(ModelResp::getName).collect(Collectors.toList());
+            List<String> datasourceNames = modelResps.stream().map(ModelResp::getName).toList();
             String message = String.format("该数据库被模型%s使用，无法删除", datasourceNames);
             throw new RuntimeException(message);
         }

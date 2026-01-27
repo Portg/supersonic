@@ -17,7 +17,7 @@ public class ChatAppManager {
 
     public static Map<String, ChatApp> getAllApps(AppModule appType) {
         return chatApps.entrySet().stream().filter(e -> e.getValue().getAppModule().equals(appType))
-                .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     public static Optional<ChatApp> getApp(String appKey) {

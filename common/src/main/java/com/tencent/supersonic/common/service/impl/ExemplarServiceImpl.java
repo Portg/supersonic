@@ -30,8 +30,7 @@ public class ExemplarServiceImpl implements ExemplarService, CommandLineRunner {
 
     private static final String SYS_EXEMPLAR_FILE = "s2-exemplar.json";
 
-    private TypeReference<List<Text2SQLExemplar>> valueTypeRef =
-            new TypeReference<List<Text2SQLExemplar>>() {};
+    private final TypeReference<List<Text2SQLExemplar>> valueTypeRef = new TypeReference<>() {};
 
     private final ObjectMapper objectMapper = JsonUtil.INSTANCE.getObjectMapper();
 
@@ -70,14 +69,12 @@ public class ExemplarServiceImpl implements ExemplarService, CommandLineRunner {
                 RetrieveQuery.builder().queryTextsList(Lists.newArrayList(query)).build();
         List<RetrieveQueryResult> results =
                 embeddingService.retrieveQuery(collection, retrieveQuery, num);
-        results.forEach(ret -> {
-            ret.getRetrieval().forEach(r -> {
-                Text2SQLExemplar tmp = // 传递相似度，可以作为样本筛选的依据
-                        JsonUtil.mapToObject(r.getMetadata(), Text2SQLExemplar.class);
-                tmp.setSimilarity(r.getSimilarity());
-                exemplars.add(tmp);
-            });
-        });
+        results.forEach(ret -> ret.getRetrieval().forEach(r -> {
+            Text2SQLExemplar tmp = // 传递相似度，可以作为样本筛选的依据
+                    JsonUtil.mapToObject(r.getMetadata(), Text2SQLExemplar.class);
+            tmp.setSimilarity(r.getSimilarity());
+            exemplars.add(tmp);
+        }));
 
         return exemplars;
     }
@@ -93,7 +90,7 @@ public class ExemplarServiceImpl implements ExemplarService, CommandLineRunner {
             InputStream inputStream = resource.getInputStream();
             List<Text2SQLExemplar> exemplars = objectMapper.readValue(inputStream, valueTypeRef);
             String collection = embeddingConfig.getText2sqlCollectionName();
-            exemplars.stream().forEach(e -> storeExemplar(collection, e));
+            exemplars.forEach(e -> storeExemplar(collection, e));
         } catch (Exception e) {
             log.error("Failed to load system exemplars", e);
         }

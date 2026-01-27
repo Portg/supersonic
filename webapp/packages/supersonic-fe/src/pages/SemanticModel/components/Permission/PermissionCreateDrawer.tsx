@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Button, message, Form, Space, Drawer, Input } from 'antd';
+import { Button, message, Form, Space, Drawer, Input, Alert, Tag, Typography } from 'antd';
 import { ProCard } from '@ant-design/pro-components';
 import { useModel } from '@umijs/max';
 import { createGroupAuth, updateGroupAuth } from '../../service';
@@ -10,6 +10,8 @@ import { TransType } from '../../enum';
 import DimensionMetricVisibleTransfer from '../Entity/DimensionMetricVisibleTransfer';
 import { wrapperTransTypeAndId } from '../../utils';
 import styles from '../style.less';
+
+const { Text } = Typography;
 
 type Props = {
   permissonData: any;
@@ -203,14 +205,46 @@ const PermissionCreateDrawer: React.FC<Props> = ({
               />
             </ProCard>
 
-            <ProCard bordered title="行权限">
+            <ProCard bordered title="行权限" tooltip="行权限通过SQL表达式过滤用户可访问的数据行">
               <div>
+                <Alert
+                  message="行权限安全提示"
+                  description={
+                    <div>
+                      <p>行权限表达式将被添加到SQL查询的WHERE子句中，请确保：</p>
+                      <ul style={{ marginBottom: 0, paddingLeft: 20 }}>
+                        <li>使用有效的SQL条件表达式，如：<Text code>dept_id = 'BU001'</Text></li>
+                        <li>多个条件可用 AND/OR 连接，如：<Text code>region IN ('华东', '华北')</Text></li>
+                        <li>禁止使用危险关键字：DROP, DELETE, UPDATE, INSERT, UNION 等</li>
+                        <li>禁止使用系统函数：SLEEP, BENCHMARK, LOAD_FILE 等</li>
+                      </ul>
+                    </div>
+                  }
+                  type="warning"
+                  showIcon
+                  style={{ marginBottom: 16 }}
+                />
                 <Form form={form} layout="vertical">
-                  <FormItem name="dimensionFilters" label="表达式">
+                  <FormItem
+                    name="dimensionFilters"
+                    label="表达式"
+                    rules={[
+                      {
+                        validator: (_, value) => {
+                          if (!value) return Promise.resolve();
+                          const dangerousPatterns = /\b(DROP|DELETE|TRUNCATE|UPDATE|INSERT|ALTER|CREATE|EXEC|EXECUTE|GRANT|REVOKE|UNION|INTO|SLEEP|BENCHMARK)\b/i;
+                          if (dangerousPatterns.test(value)) {
+                            return Promise.reject(new Error('表达式包含禁止的关键字，请检查'));
+                          }
+                          return Promise.resolve();
+                        },
+                      },
+                    ]}
+                  >
                     <SqlEditor height={'150px'} />
                   </FormItem>
                   <FormItem name="dimensionFilterDescription" label="描述">
-                    <TextArea placeholder="行权限描述" />
+                    <TextArea placeholder="请描述此行权限的用途，如：仅允许查看华东区域的数据" />
                   </FormItem>
                 </Form>
               </div>

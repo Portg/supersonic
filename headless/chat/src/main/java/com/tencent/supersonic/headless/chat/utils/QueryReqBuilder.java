@@ -65,20 +65,17 @@ public class QueryReqBuilder {
     }
 
     private static List<Filter> getFilters(Set<QueryFilter> queryFilters) {
-        List<Filter> dimensionFilters =
-                queryFilters.stream()
-                        .filter(chatFilter -> StringUtils.isNotEmpty(chatFilter.getBizName()))
-                        .map(chatFilter -> new Filter(chatFilter.getBizName(),
-                                chatFilter.getOperator(), chatFilter.getValue()))
-                        .collect(Collectors.toList());
-        return dimensionFilters;
+        return queryFilters.stream()
+                .filter(chatFilter -> StringUtils.isNotEmpty(chatFilter.getBizName()))
+                .map(chatFilter -> new Filter(chatFilter.getBizName(), chatFilter.getOperator(),
+                        chatFilter.getValue()))
+                .collect(Collectors.toList());
     }
 
     private static void deletionDuplicated(QueryStructReq queryStructReq) {
         if (!CollectionUtils.isEmpty(queryStructReq.getGroups())
                 && queryStructReq.getGroups().size() > 1) {
-            Set<String> groups = new HashSet<>();
-            groups.addAll(queryStructReq.getGroups());
+            Set<String> groups = new HashSet<>(queryStructReq.getGroups());
             queryStructReq.getGroups().clear();
             queryStructReq.getGroups().addAll(groups);
         }

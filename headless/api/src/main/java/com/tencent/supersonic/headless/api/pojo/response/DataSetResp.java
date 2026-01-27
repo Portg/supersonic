@@ -28,7 +28,17 @@ public class DataSetResp extends SchemaItem {
 
     private List<String> adminOrgs = new ArrayList<>();
 
+    private List<String> viewers = new ArrayList<>();
+
+    private List<String> viewOrgs = new ArrayList<>();
+
+    private Integer isOpen = 0;
+
     private QueryConfig queryConfig = new QueryConfig();
+
+    public boolean openToAll() {
+        return isOpen != null && isOpen == 1;
+    }
 
     public List<Long> metricIds() {
         return getDataSetModelConfigs().stream().map(DataSetModelConfig::getMetrics)

@@ -167,7 +167,7 @@ public class S2SingerDemo extends S2BaseDemo {
         // configure chat apps
         Map<String, ChatApp> chatAppConfig =
                 Maps.newHashMap(ChatAppManager.getAllApps(AppModule.CHAT));
-        chatAppConfig.values().forEach(app -> app.setChatModelId(demoChatModel.getId()));
+        chatAppConfig.values().forEach(app -> app.setChatModelId(demoChatModel.getId().intValue()));
         agent.setChatAppConfig(chatAppConfig);
         agent.setAdmins(Lists.newArrayList("alice"));
         agent.setViewers(Lists.newArrayList("tom", "jack"));

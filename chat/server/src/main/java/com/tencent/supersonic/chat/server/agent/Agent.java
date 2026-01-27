@@ -7,6 +7,7 @@ import com.tencent.supersonic.common.pojo.ChatApp;
 import com.tencent.supersonic.common.pojo.RecordInfo;
 import com.tencent.supersonic.common.pojo.User;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import org.springframework.util.CollectionUtils;
 
 import java.util.Collection;
@@ -17,6 +18,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+@EqualsAndHashCode(callSuper = true)
 @Data
 public class Agent extends RecordInfo {
 
@@ -43,7 +45,7 @@ public class Agent extends RecordInfo {
     private Integer isOpen = 0;
 
     public List<String> getTools(AgentToolType type) {
-        Map<String, Object> map = JSONObject.parseObject(toolConfig, Map.class);
+        Map map = JSONObject.parseObject(toolConfig, Map.class);
         if (CollectionUtils.isEmpty(map) || map.get("tools") == null) {
             return Collections.emptyList();
         }

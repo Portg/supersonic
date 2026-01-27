@@ -106,7 +106,7 @@ public class SchemaServiceImpl implements SchemaService {
 
     private List<DataSetSchemaResp> fetchDataSetSchema(Set<Long> ids) {
         DataSetFilterReq dataSetFilterReq = new DataSetFilterReq();
-        dataSetFilterReq.setDataSetIds(new ArrayList(ids));
+        dataSetFilterReq.setDataSetIds(new ArrayList<>(ids));
         return fetchDataSetSchema(dataSetFilterReq);
     }
 

@@ -57,7 +57,8 @@ public class CoreDictionary {
         TreeMap<String, Attribute> map = new TreeMap<>();
         BufferedReader br = null;
         try {
-            br = new BufferedReader(new InputStreamReader(IOUtil.newInputStream(path), StandardCharsets.UTF_8));
+            br = new BufferedReader(
+                    new InputStreamReader(IOUtil.newInputStream(path), StandardCharsets.UTF_8));
             String line;
             int totalFrequency = 0;
             long start = System.currentTimeMillis();

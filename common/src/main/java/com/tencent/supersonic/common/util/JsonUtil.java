@@ -414,8 +414,7 @@ public class JsonUtil {
         if (obj == null) {
             return null;
         }
-        return objectMapper.convertValue(obj, new TypeReference<>() {
-        });
+        return objectMapper.convertValue(obj, new TypeReference<>() {});
     }
 
     /** 对象转换成Map */
@@ -423,8 +422,7 @@ public class JsonUtil {
         if (obj == null) {
             return null;
         }
-        return objectMapper.convertValue(obj, new TypeReference<>() {
-        });
+        return objectMapper.convertValue(obj, new TypeReference<>() {});
     }
 
     /**

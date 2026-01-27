@@ -1,13 +1,14 @@
 .conversation {
   position: relative;
-  width: 248px;
+  width: 0;
   height: 100%;
   background: #f9f9f9;
-  padding: 10px 10px;
-  border-right: 1px solid #f1f1f1;
-
+  padding: 0;
+  overflow: hidden;
+  transition: width 0.3s ease, padding 0.3s ease;
 
   .rightSection {
+    display: none;
     width: 100%;
     height: 100%;
 
@@ -166,9 +167,14 @@
   }
 
   &.historyVisible {
-    width: 400px;
+    width: 320px;
     padding: 10px 16px;
     border-left: 1px solid #f1f1f1;
     z-index: 99;
+    overflow: visible;
+
+    .rightSection {
+      display: block;
+    }
   }
 }

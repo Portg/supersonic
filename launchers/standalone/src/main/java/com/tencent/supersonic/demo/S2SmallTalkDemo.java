@@ -36,7 +36,7 @@ public class S2SmallTalkDemo extends S2BaseDemo {
         // configure chat apps
         Map<String, ChatApp> chatAppConfig =
                 Maps.newHashMap(ChatAppManager.getAllApps(AppModule.CHAT));
-        chatAppConfig.values().forEach(app -> app.setChatModelId(demoChatModel.getId()));
+        chatAppConfig.values().forEach(app -> app.setChatModelId(demoChatModel.getId().intValue()));
         chatAppConfig.get(PlainTextExecutor.APP_KEY).setEnable(true);
         chatAppConfig.get(OnePassSCSqlGenStrategy.APP_KEY).setEnable(false);
         agent.setChatAppConfig(chatAppConfig);
@@ -47,8 +47,7 @@ public class S2SmallTalkDemo extends S2BaseDemo {
 
     @Override
     protected boolean checkNeedToRun() {
-        List<String> agentNames =
-                agentService.getAgents().stream().map(Agent::getName).toList();
+        List<String> agentNames = agentService.getAgents().stream().map(Agent::getName).toList();
         return !agentNames.contains("闲聊助手");
     }
 

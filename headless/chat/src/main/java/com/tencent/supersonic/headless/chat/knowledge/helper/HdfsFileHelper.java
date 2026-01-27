@@ -68,9 +68,7 @@ public class HdfsFileHelper {
         log.info("CustomDictionaryPath:{}", fileList);
         Config.CustomDictionaryPath = fileList.toArray(new String[0]);
         customDictionary.path =
-                Config.CustomDictionaryPath.length == 0
-                        ? path
-                        : Config.CustomDictionaryPath;
+                Config.CustomDictionaryPath.length == 0 ? path : Config.CustomDictionaryPath;
         if (Config.CustomDictionaryPath.length == 0) {
             Config.CustomDictionaryPath = path;
         }

@@ -254,7 +254,7 @@ public class S2CompanyDemo extends S2BaseDemo {
         // configure chat apps
         Map<String, ChatApp> chatAppConfig =
                 Maps.newHashMap(ChatAppManager.getAllApps(AppModule.CHAT));
-        chatAppConfig.values().forEach(app -> app.setChatModelId(demoChatModel.getId()));
+        chatAppConfig.values().forEach(app -> app.setChatModelId(demoChatModel.getId().intValue()));
         agent.setChatAppConfig(chatAppConfig);
 
         return agentService.createAgent(agent, defaultUser);

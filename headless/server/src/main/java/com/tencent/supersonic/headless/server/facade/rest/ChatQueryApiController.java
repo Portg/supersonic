@@ -55,7 +55,7 @@ public class ChatQueryApiController {
         User user = UserHolder.findUser(request, response);
         ParseResp parseResp = chatLayerService.parse(queryNLReq);
         if (parseResp.getState().equals(ParseResp.ParseState.COMPLETED)) {
-            SemanticParseInfo parseInfo = parseResp.getSelectedParses().get(0);
+            SemanticParseInfo parseInfo = parseResp.getSelectedParses().getFirst();
             QuerySqlReq sqlReq = new QuerySqlReq();
             sqlReq.setSql(parseInfo.getSqlInfo().getCorrectedS2SQL());
             sqlReq.setSqlInfo(parseInfo.getSqlInfo());

@@ -98,7 +98,7 @@ public abstract class S2BaseDemo implements CommandLineRunner {
     @Value("${s2.demo.names:S2VisitsDemo}")
     protected List<String> demoList;
 
-    @Value("${spring.datasource.driver-class-name}")
+    @Value("${spring.datasource.driver-class-name:}")
     protected String driverClassName;
 
     public void run(String... args) {
@@ -118,7 +118,7 @@ public abstract class S2BaseDemo implements CommandLineRunner {
     protected DatabaseResp addDatabaseIfNotExist() {
         List<DatabaseResp> databaseList = databaseService.getDatabaseList(defaultUser);
         if (!CollectionUtils.isEmpty(databaseList)) {
-            return databaseList.get(0);
+            return databaseList.getFirst();
         }
         String url = dataSourceProperties.getUrl();
         DatabaseReq databaseReq = new DatabaseReq();

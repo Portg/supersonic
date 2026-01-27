@@ -84,6 +84,10 @@ public class OnePassSCSqlGenStrategy extends SqlGenStrategy {
 
         // 2.generate sql generation prompt for each self-consistency inference
         ChatApp chatApp = llmReq.getChatAppConfig().get(APP_KEY);
+        if (chatApp == null || chatApp.getChatModelConfig() == null) {
+            log.warn("ChatApp or ChatModelConfig is null for key: {}", APP_KEY);
+            return llmResp;
+        }
         ChatModelConfig chatModelConfig = chatApp.getChatModelConfig();
         if (!StringUtils.isBlank(parserConfig.getParameterValue(PARSER_FORMAT_JSON_TYPE))) {
             chatModelConfig.setJsonFormat(true);

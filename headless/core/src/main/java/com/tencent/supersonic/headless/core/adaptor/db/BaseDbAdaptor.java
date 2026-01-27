@@ -122,24 +122,11 @@ public abstract class BaseDbAdaptor implements DbAdaptor {
     }
 
     public FieldType classifyColumnType(String typeName) {
-        switch (typeName.toUpperCase()) {
-            case "INT":
-            case "INTEGER":
-            case "BIGINT":
-            case "SMALLINT":
-            case "TINYINT":
-            case "FLOAT":
-            case "DOUBLE":
-            case "DECIMAL":
-            case "NUMERIC":
-                return FieldType.measure;
-            case "DATE":
-            case "TIME":
-            case "TIMESTAMP":
-                return FieldType.time;
-            default:
-                return FieldType.categorical;
-        }
+        return switch (typeName.toUpperCase()) {
+            case "INT", "INTEGER", "BIGINT", "SMALLINT", "TINYINT", "FLOAT", "DOUBLE", "DECIMAL", "NUMERIC" -> FieldType.measure;
+            case "DATE", "TIME", "TIMESTAMP" -> FieldType.time;
+            default -> FieldType.categorical;
+        };
     }
 
     public Properties getProperties(ConnectInfo connectionInfo) {

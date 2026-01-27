@@ -2,7 +2,6 @@ import { PlusCircleOutlined } from '@ant-design/icons';
 import { AgentType } from '../type';
 import styles from './style.module.less';
 import classNames from 'classnames';
-import { message } from 'antd';
 import IconFont from '../../components/IconFont';
 import { AGENT_ICONS } from '../constants';
 
@@ -10,18 +9,24 @@ type Props = {
   agentList: AgentType[];
   currentAgent?: AgentType;
   onSelectAgent: (agent: AgentType) => void;
+  onAddAgent?: () => void;
 };
 
-const AgentList: React.FC<Props> = ({ agentList, currentAgent, onSelectAgent }) => {
-  const onAddAgent = () => {
-    message.info('正在开发中，敬请期待');
+const AgentList: React.FC<Props> = ({ agentList, currentAgent, onSelectAgent, onAddAgent }) => {
+  const handleAddAgent = () => {
+    if (onAddAgent) {
+      onAddAgent();
+    } else {
+      // 默认行为：在当前窗口打开助手管理页面
+      window.location.href = '/agent';
+    }
   };
 
   return (
     <div className={styles.agentList}>
       <div className={styles.header}>
         <div className={styles.headerTitle}>智能助理</div>
-        <PlusCircleOutlined className={styles.plusIcon} onClick={onAddAgent} />
+        <PlusCircleOutlined className={styles.plusIcon} onClick={handleAddAgent} />
       </div>
       <div className={styles.agentListContent}>
         {agentList.map((agent, index) => {

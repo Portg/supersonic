@@ -1,24 +1,126 @@
+# =============================================
+# Java / Maven
+# =============================================
 target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+**/.flattened-pom.xml
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# =============================================
+# IDE
+# =============================================
 .idea/
 .vscode/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+.factorypath
+*.swp
+*.swo
+*~
+.history
+
+# =============================================
+# OS
+# =============================================
+*.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# =============================================
+# Logs
+# =============================================
 logs/
 log/
-*.DS_Store
-*.iml
-*.bin
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-error.log*
+pnpm-debug.log*
+
+# =============================================
+# Node.js / Frontend
+# =============================================
+**/node_modules/
+**/dist/
+**/build/
+**/.umi/
+**/.umi-production/
+.eslintcache
+.stylelintcache
+
+# =============================================
+# Frontend Build Artifacts
+# =============================================
+webapp/packages/supersonic-fe/supersonic-webapp/
+webapp/packages/supersonic-fe/public/version.js
+supersonic-webapp.tar.gz
+package-lock.json
+yarn.lock
+
+# =============================================
+# Environment & Secrets
+# =============================================
+.env
+.env.*
+!.env.example
+
+# =============================================
+# Runtime & Deploy
+# =============================================
+assembly/runtime/*
+assembly/build/*-SNAPSHOT
+/assembly/deploy
+/runtime
+
+# =============================================
+# Data & Cache
+# =============================================
+chm_db/
+/dict
+__pycache__/
+*.pyc
+*.bin
+
+# =============================================
+# Archives
+# =============================================
 *.tar.gz
 *.zip
 *.lib
-assembly/runtime/*
-**/dist/
-*.umi/
-/assembly/deploy
-/runtime
-**/.flattened-pom.xml
-chm_db/
-__pycache__/
-/dict
-assembly/build/*-SNAPSHOT
-**/node_modules/
+
+# =============================================
+# AI / Code Assistant
+# =============================================
+.claude/
+
+# =============================================
+# Code Quality Tools
+# =============================================
+qodana.yaml
+.qodana/
+
+# =============================================
+# Test & Coverage
+# =============================================
+**/coverage/
+*.exec
+surefire-reports/
+failsafe-reports/
+
+# =============================================
+# Benchmark
+# =============================================
 benchmark/res/

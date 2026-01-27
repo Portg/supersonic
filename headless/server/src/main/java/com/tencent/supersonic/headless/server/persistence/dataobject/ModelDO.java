@@ -60,4 +60,10 @@ public class ModelDO {
     private String sourceType;
 
     private String ext;
+
+    /** 租户ID */
+    private Long tenantId;
+
+    /** 实体信息 */
+    private String entity;
 }

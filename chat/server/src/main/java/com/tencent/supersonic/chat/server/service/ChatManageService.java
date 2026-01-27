@@ -19,15 +19,15 @@ import java.util.List;
 public interface ChatManageService {
     Long addChat(User user, String chatName, Integer agentId);
 
-    List<ChatDO> getAll(String userName, Integer agentId);
+    List<ChatDO> getAll(User user, Integer agentId);
 
-    boolean updateChatName(Long chatId, String chatName, String userName);
+    boolean updateChatName(Long chatId, String chatName, User user);
 
     boolean updateFeedback(Long id, Integer score, String feedback);
 
     boolean updateChatIsTop(Long chatId, int isTop);
 
-    Boolean deleteChat(Long chatId, String userName);
+    Boolean deleteChat(Long chatId, User user);
 
     PageInfo<QueryResp> queryInfo(PageQueryInfoReq pageQueryInfoReq, long chatId);
 

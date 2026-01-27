@@ -18,6 +18,7 @@ import com.tencent.supersonic.chat.server.persistence.repository.ChatRepository;
 import com.tencent.supersonic.chat.server.pojo.ChatMemory;
 import com.tencent.supersonic.chat.server.service.ChatManageService;
 import com.tencent.supersonic.chat.server.service.MemoryService;
+import com.tencent.supersonic.common.context.TenantContext;
 import com.tencent.supersonic.common.pojo.User;
 import com.tencent.supersonic.common.util.JsonUtil;
 import com.tencent.supersonic.headless.api.pojo.SemanticParseInfo;
@@ -42,11 +43,14 @@ public class ChatManageServiceImpl implements ChatManageService {
     @Autowired
     private MemoryService memoryService;
 
+    private static final Long DEFAULT_TENANT_ID = 1L;
+
     @Override
     public Long addChat(User user, String chatName, Integer agentId) {
         ChatDO chatDO = new ChatDO();
         chatDO.setChatName(chatName);
         chatDO.setCreator(user.getName());
+        chatDO.setTenantId(getEffectiveTenantId(user));
         chatDO.setCreateTime(getCurrentTime());
         chatDO.setIsDelete(0);
         chatDO.setLastTime(getCurrentTime());
@@ -57,13 +61,14 @@ public class ChatManageServiceImpl implements ChatManageService {
     }
 
     @Override
-    public List<ChatDO> getAll(String userName, Integer agentId) {
-        return chatRepository.getAll(userName, agentId);
+    public List<ChatDO> getAll(User user, Integer agentId) {
+        return chatRepository.getAll(user.getName(), agentId, getEffectiveTenantId(user));
     }
 
     @Override
-    public boolean updateChatName(Long chatId, String chatName, String userName) {
-        return chatRepository.updateChatName(chatId, chatName, getCurrentTime(), userName);
+    public boolean updateChatName(Long chatId, String chatName, User user) {
+        return chatRepository.updateChatName(chatId, chatName, getCurrentTime(), user.getName(),
+                getEffectiveTenantId(user));
     }
 
     @Override
@@ -98,8 +103,8 @@ public class ChatManageServiceImpl implements ChatManageService {
     }
 
     @Override
-    public Boolean deleteChat(Long chatId, String userName) {
-        return chatRepository.deleteChat(chatId, userName);
+    public Boolean deleteChat(Long chatId, User user) {
+        return chatRepository.deleteChat(chatId, user.getName(), getEffectiveTenantId(user));
     }
 
     @Override
@@ -233,6 +238,17 @@ public class ChatManageServiceImpl implements ChatManageService {
     private String getCurrentTime() {
         SimpleDateFormat tempDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         return tempDate.format(new java.util.Date());
+    }
+
+    private Long getEffectiveTenantId(User user) {
+        Long tenantId = TenantContext.getTenantId();
+        if (tenantId != null) {
+            return tenantId;
+        }
+        if (user != null && user.getTenantId() != null) {
+            return user.getTenantId();
+        }
+        return DEFAULT_TENANT_ID;
     }
 
     @Override

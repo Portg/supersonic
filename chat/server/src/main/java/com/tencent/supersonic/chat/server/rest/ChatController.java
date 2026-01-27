@@ -32,23 +32,20 @@ public class ChatController {
     public List<ChatDO> getAllChats(
             @RequestParam(value = "agentId", required = false) Integer agentId,
             HttpServletRequest request, HttpServletResponse response) {
-        String userName = UserHolder.findUser(request, response).getName();
-        return chatService.getAll(userName, agentId);
+        return chatService.getAll(UserHolder.findUser(request, response), agentId);
     }
 
     @PostMapping("/delete")
     public Boolean deleteChat(@RequestParam(value = "chatId") long chatId,
             HttpServletRequest request, HttpServletResponse response) {
-        String userName = UserHolder.findUser(request, response).getName();
-        return chatService.deleteChat(chatId, userName);
+        return chatService.deleteChat(chatId, UserHolder.findUser(request, response));
     }
 
     @PostMapping("/updateChatName")
     public Boolean updateChatName(@RequestParam(value = "chatId") Long chatId,
             @RequestParam(value = "chatName") String chatName, HttpServletRequest request,
             HttpServletResponse response) {
-        String userName = UserHolder.findUser(request, response).getName();
-        return chatService.updateChatName(chatId, chatName, userName);
+        return chatService.updateChatName(chatId, chatName, UserHolder.findUser(request, response));
     }
 
     @PostMapping("/updateQAFeedback")

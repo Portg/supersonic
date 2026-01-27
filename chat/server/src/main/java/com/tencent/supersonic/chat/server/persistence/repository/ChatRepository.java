@@ -9,9 +9,10 @@ public interface ChatRepository {
 
     Long createChat(ChatDO chatDO);
 
-    List<ChatDO> getAll(String creator, Integer agentId);
+    List<ChatDO> getAll(String creator, Integer agentId, Long tenantId);
 
-    Boolean updateChatName(Long chatId, String chatName, String lastTime, String creator);
+    Boolean updateChatName(Long chatId, String chatName, String lastTime, String creator,
+            Long tenantId);
 
     Boolean updateLastQuestion(Long chatId, String lastQuestion, String lastTime);
 
@@ -19,5 +20,5 @@ public interface ChatRepository {
 
     boolean updateFeedback(QueryDO queryDO);
 
-    Boolean deleteChat(Long chatId, String userName);
+    Boolean deleteChat(Long chatId, String userName, Long tenantId);
 }

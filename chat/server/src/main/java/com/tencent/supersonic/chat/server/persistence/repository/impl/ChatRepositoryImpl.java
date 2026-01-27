@@ -28,13 +28,14 @@ public class ChatRepositoryImpl implements ChatRepository {
     }
 
     @Override
-    public List<ChatDO> getAll(String creator, Integer agentId) {
-        return chatMapper.getAll(creator, agentId);
+    public List<ChatDO> getAll(String creator, Integer agentId, Long tenantId) {
+        return chatMapper.getAll(creator, agentId, tenantId);
     }
 
     @Override
-    public Boolean updateChatName(Long chatId, String chatName, String lastTime, String creator) {
-        return chatMapper.updateChatName(chatId, chatName, lastTime, creator);
+    public Boolean updateChatName(Long chatId, String chatName, String lastTime, String creator,
+            Long tenantId) {
+        return chatMapper.updateChatName(chatId, chatName, lastTime, creator, tenantId);
     }
 
     @Override
@@ -53,7 +54,7 @@ public class ChatRepositoryImpl implements ChatRepository {
     }
 
     @Override
-    public Boolean deleteChat(Long chatId, String userName) {
-        return chatMapper.deleteChat(chatId, userName);
+    public Boolean deleteChat(Long chatId, String userName, Long tenantId) {
+        return chatMapper.deleteChat(chatId, userName, tenantId);
     }
 }

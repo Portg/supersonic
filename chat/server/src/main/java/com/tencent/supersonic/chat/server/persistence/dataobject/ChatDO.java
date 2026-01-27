@@ -19,4 +19,6 @@ public class ChatDO {
     private String lastQuestion;
     private int isDelete;
     private int isTop;
+    /** 租户ID */
+    private Long tenantId;
 }

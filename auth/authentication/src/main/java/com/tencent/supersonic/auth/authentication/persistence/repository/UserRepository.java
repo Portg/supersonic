@@ -15,6 +15,8 @@ public interface UserRepository {
 
     UserDO getUser(String name);
 
+    UserDO getUser(Long userId);
+
     void updateUser(UserDO userDO);
 
     void addUserToken(UserTokenDO userTokenDO);

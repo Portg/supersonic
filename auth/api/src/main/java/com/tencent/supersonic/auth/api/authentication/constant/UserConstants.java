@@ -14,6 +14,8 @@ public class UserConstants {
 
     public static final String TOKEN_IS_ADMIN = "token_is_admin";
     public static final String TOKEN_CREATE_TIME = "token_create_time";
+    public static final String TOKEN_TENANT_ID = "token_tenant_id";
+    public static final String TOKEN_USER_ROLE = "token_user_role";
 
     public static final String TOKEN_PREFIX = "Bearer";
     public static final String INTERNAL = "internal";

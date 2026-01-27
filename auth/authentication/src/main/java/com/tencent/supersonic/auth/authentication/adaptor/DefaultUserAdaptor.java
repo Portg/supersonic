@@ -7,10 +7,15 @@ import com.tencent.supersonic.auth.api.authentication.pojo.Organization;
 import com.tencent.supersonic.auth.api.authentication.pojo.UserToken;
 import com.tencent.supersonic.auth.api.authentication.pojo.UserWithPassword;
 import com.tencent.supersonic.auth.api.authentication.request.UserReq;
+import com.tencent.supersonic.auth.authentication.persistence.dataobject.OrganizationDO;
 import com.tencent.supersonic.auth.authentication.persistence.dataobject.UserDO;
+import com.tencent.supersonic.auth.authentication.persistence.dataobject.UserOrganizationDO;
 import com.tencent.supersonic.auth.authentication.persistence.dataobject.UserTokenDO;
+import com.tencent.supersonic.auth.authentication.persistence.mapper.UserRoleDOMapper;
+import com.tencent.supersonic.auth.authentication.persistence.repository.OrganizationRepository;
 import com.tencent.supersonic.auth.authentication.persistence.repository.UserRepository;
 import com.tencent.supersonic.auth.authentication.utils.TokenService;
+import com.tencent.supersonic.common.context.TenantContext;
 import com.tencent.supersonic.common.pojo.User;
 import com.tencent.supersonic.common.util.AESEncryptionUtil;
 import com.tencent.supersonic.common.util.ContextUtils;
@@ -19,8 +24,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -54,22 +62,103 @@ public class DefaultUserAdaptor implements UserAdaptor {
 
     @Override
     public List<Organization> getOrganizationTree() {
-        Organization superSonic =
-                new Organization("1", "0", "SuperSonic", "SuperSonic", Lists.newArrayList(), true);
-        Organization hr =
-                new Organization("2", "1", "Hr", "SuperSonic/Hr", Lists.newArrayList(), false);
-        Organization sales = new Organization("3", "1", "Sales", "SuperSonic/Sales",
-                Lists.newArrayList(), false);
-        Organization marketing = new Organization("4", "1", "Marketing", "SuperSonic/Marketing",
-                Lists.newArrayList(), false);
-        List<Organization> subOrganization = Lists.newArrayList(hr, sales, marketing);
-        superSonic.setSubOrganizations(subOrganization);
-        return Lists.newArrayList(superSonic);
+        OrganizationRepository organizationRepository =
+                ContextUtils.getBean(OrganizationRepository.class);
+        Long tenantId = TenantContext.getTenantIdOrDefault(1L);
+
+        // 获取当前租户的所有组织
+        List<OrganizationDO> allOrganizations =
+                organizationRepository.getOrganizationListByTenantId(tenantId);
+
+        if (allOrganizations.isEmpty()) {
+            // 如果数据库中没有组织数据，返回空列表
+            return Lists.newArrayList();
+        }
+
+        // 构建组织树
+        return buildOrganizationTree(allOrganizations);
+    }
+
+    /**
+     * 将扁平的组织列表构建成树形结构
+     */
+    private List<Organization> buildOrganizationTree(List<OrganizationDO> allOrganizations) {
+        // 转换为 Organization 对象的 Map，方便查找
+        Map<Long, Organization> orgMap = new HashMap<>();
+        for (OrganizationDO orgDO : allOrganizations) {
+            Organization org = convertToOrganization(orgDO);
+            orgMap.put(orgDO.getId(), org);
+        }
+
+        // 构建树形结构
+        List<Organization> roots = new ArrayList<>();
+        for (OrganizationDO orgDO : allOrganizations) {
+            Organization org = orgMap.get(orgDO.getId());
+            if (orgDO.getIsRoot() != null && orgDO.getIsRoot() == 1) {
+                // 根组织
+                roots.add(org);
+            } else if (orgDO.getParentId() != null && orgDO.getParentId() > 0) {
+                // 非根组织，添加到父组织的子列表中
+                Organization parent = orgMap.get(orgDO.getParentId());
+                if (parent != null) {
+                    parent.getSubOrganizations().add(org);
+                }
+            }
+        }
+
+        return roots;
+    }
+
+    /**
+     * 将 OrganizationDO 转换为 Organization
+     */
+    private Organization convertToOrganization(OrganizationDO orgDO) {
+        return new Organization(String.valueOf(orgDO.getId()),
+                orgDO.getParentId() != null ? String.valueOf(orgDO.getParentId()) : "0",
+                orgDO.getName(), orgDO.getFullName(), Lists.newArrayList(),
+                orgDO.getIsRoot() != null && orgDO.getIsRoot() == 1);
     }
 
     private User convert(UserDO userDO) {
         User user = new User();
         BeanUtils.copyProperties(userDO, user);
+
+        // Populate organization information
+        try {
+            OrganizationRepository organizationRepository =
+                    ContextUtils.getBean(OrganizationRepository.class);
+            List<UserOrganizationDO> userOrgs =
+                    organizationRepository.getUserOrganizations(userDO.getId());
+            if (userOrgs != null && !userOrgs.isEmpty()) {
+                // Find primary organization first, or use the first one
+                UserOrganizationDO primaryOrg = userOrgs.stream()
+                        .filter(uo -> uo.getIsPrimary() != null && uo.getIsPrimary() == 1)
+                        .findFirst().orElse(userOrgs.get(0));
+                user.setOrganizationId(primaryOrg.getOrganizationId());
+
+                // Get organization name
+                OrganizationDO orgDO =
+                        organizationRepository.getOrganization(primaryOrg.getOrganizationId());
+                if (orgDO != null) {
+                    user.setOrganizationName(orgDO.getName());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to load organization info for user {}: {}", userDO.getName(),
+                    e.getMessage());
+        }
+
+        // Populate role information
+        try {
+            UserRoleDOMapper userRoleDOMapper = ContextUtils.getBean(UserRoleDOMapper.class);
+            List<Long> roleIds = userRoleDOMapper.selectRoleIdsByUserId(userDO.getId());
+            List<String> roleNames = userRoleDOMapper.selectRoleNamesByUserId(userDO.getId());
+            user.setRoleIds(roleIds);
+            user.setRoleNames(roleNames);
+        } catch (Exception e) {
+            log.warn("Failed to load role info for user {}: {}", userDO.getName(), e.getMessage());
+        }
+
         return user;
     }
 
@@ -89,6 +178,9 @@ public class DefaultUserAdaptor implements UserAdaptor {
         } catch (Exception e) {
             throw new RuntimeException("password encrypt error, please try again");
         }
+        // Set tenant ID from context or use default tenant (1)
+        Long tenantId = TenantContext.getTenantIdOrDefault(1L);
+        userDO.setTenantId(tenantId);
         userRepository.addUser(userDO);
     }
 
@@ -114,7 +206,7 @@ public class DefaultUserAdaptor implements UserAdaptor {
             updateLastLogin(userReq.getName());
             return token;
         } catch (Exception e) {
-            log.error("", e);
+            log.error("Login error", e);
             throw new RuntimeException("password encrypt error, please try again");
         }
     }
@@ -190,10 +282,9 @@ public class DefaultUserAdaptor implements UserAdaptor {
             String password = AESEncryptionUtil.encrypt(userReq.getPassword(),
                     AESEncryptionUtil.getBytesFromString(userDO.getSalt()));
             if (userDO.getPassword().equals(password)) {
-                UserWithPassword user = UserWithPassword.get(userDO.getId(), userDO.getName(),
+                return UserWithPassword.get(userDO.getId(), userDO.getName(),
                         userDO.getDisplayName(), userDO.getEmail(), userDO.getPassword(),
-                        userDO.getIsAdmin());
-                return user;
+                        userDO.getIsAdmin(), userDO.getTenantId(), null);
             } else {
                 throw new RuntimeException("password not correct, please try again");
             }
@@ -204,12 +295,37 @@ public class DefaultUserAdaptor implements UserAdaptor {
 
     @Override
     public List<User> getUserByOrg(String key) {
-        return Lists.newArrayList();
+        OrganizationRepository organizationRepository =
+                ContextUtils.getBean(OrganizationRepository.class);
+        UserRepository userRepository = ContextUtils.getBean(UserRepository.class);
+
+        try {
+            Long orgId = Long.parseLong(key);
+            List<Long> userIds = organizationRepository.getUserIdsByOrganizationId(orgId);
+            if (userIds.isEmpty()) {
+                return Lists.newArrayList();
+            }
+            return userIds.stream().map(userRepository::getUser).filter(userDO -> userDO != null)
+                    .map(this::convert).collect(Collectors.toList());
+        } catch (NumberFormatException e) {
+            // key 不是数字，可能是组织名称，暂不支持
+            return Lists.newArrayList();
+        }
     }
 
     @Override
     public Set<String> getUserAllOrgId(String userName) {
-        return Sets.newHashSet();
+        OrganizationRepository organizationRepository =
+                ContextUtils.getBean(OrganizationRepository.class);
+        UserRepository userRepository = ContextUtils.getBean(UserRepository.class);
+
+        UserDO userDO = userRepository.getUser(userName);
+        if (userDO == null) {
+            return Sets.newHashSet();
+        }
+
+        List<Long> orgIds = organizationRepository.getOrganizationIdsByUserId(userDO.getId());
+        return orgIds.stream().map(String::valueOf).collect(Collectors.toSet());
     }
 
     @Override
@@ -219,9 +335,9 @@ public class DefaultUserAdaptor implements UserAdaptor {
         if (userDO == null) {
             throw new RuntimeException("user not exist,please register");
         }
-        UserWithPassword userWithPassword =
-                new UserWithPassword(userDO.getId(), userDO.getName(), userDO.getDisplayName(),
-                        userDO.getEmail(), userDO.getPassword(), userDO.getIsAdmin());
+        UserWithPassword userWithPassword = new UserWithPassword(userDO.getId(), userDO.getName(),
+                userDO.getDisplayName(), userDO.getEmail(), userDO.getPassword(),
+                userDO.getIsAdmin(), userDO.getTenantId(), null);
 
         // 使用令牌名称作为生成key ，这样可以区分正常请求和api 请求，api 的令牌失效时间很长，需考虑令牌泄露的情况
         String token = tokenService.generateToken(UserWithPassword.convert(userWithPassword),
@@ -245,9 +361,8 @@ public class DefaultUserAdaptor implements UserAdaptor {
     @Override
     public List<UserToken> getUserTokens(String userName) {
         UserRepository userRepository = ContextUtils.getBean(UserRepository.class);
-        List<UserToken> userTokens = userRepository.getUserTokenListByName(userName).stream()
-                .map(this::convertUserToken).collect(Collectors.toList());
-        return userTokens;
+        return userRepository.getUserTokenListByName(userName).stream().map(this::convertUserToken)
+                .collect(Collectors.toList());
     }
 
     private UserTokenDO saveUserToken(String tokenName, String userName, String token,

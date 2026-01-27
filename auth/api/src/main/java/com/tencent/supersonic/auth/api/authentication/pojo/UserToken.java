@@ -10,7 +10,7 @@ import java.util.Date;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserToken {
-    private Integer id;
+    private Long id;
     private String name;
     private String userName;
     private String token;

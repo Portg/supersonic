@@ -69,6 +69,11 @@ public class DefaultAuthenticationInterceptor extends AuthenticationInterceptor 
         String password = String.valueOf(claims.get(TOKEN_USER_PASSWORD));
         Integer isAdmin = claims.get(TOKEN_IS_ADMIN) == null ? 0
                 : Integer.parseInt(claims.get(TOKEN_IS_ADMIN).toString());
-        return UserWithPassword.get(userId, userName, displayName, email, password, isAdmin);
+        Long tenantId = claims.get(TOKEN_TENANT_ID) == null ? null
+                : Long.parseLong(claims.get(TOKEN_TENANT_ID).toString());
+        String role = claims.get(TOKEN_USER_ROLE) == null ? null
+                : String.valueOf(claims.get(TOKEN_USER_ROLE));
+        return UserWithPassword.get(userId, userName, displayName, email, password, isAdmin,
+                tenantId, role);
     }
 }

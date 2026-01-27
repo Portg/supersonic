@@ -8,6 +8,7 @@ import com.tencent.supersonic.auth.api.authentication.service.UserService;
 import com.tencent.supersonic.common.pojo.User;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
@@ -105,5 +106,24 @@ public class UserController {
     @PostMapping("/deleteUserToken")
     public void deleteUserToken(@RequestParam(name = "tokenId") Long tokenId) {
         userService.deleteUserToken(tokenId);
+    }
+
+    @PostMapping("/role")
+    public void assignRolesToUser(@RequestBody UserRoleReq userRoleReq, HttpServletRequest request,
+            HttpServletResponse response) {
+        User currentUser = userService.getCurrentUser(request, response);
+        userService.assignRolesToUser(userRoleReq.getUserId(), userRoleReq.getRoleIds(),
+                currentUser.getName());
+    }
+
+    @GetMapping("/{userId}/role-ids")
+    public List<Long> getUserRoleIds(@PathVariable("userId") Long userId) {
+        return userService.getUserRoleIds(userId);
+    }
+
+    @Data
+    public static class UserRoleReq {
+        private Long userId;
+        private List<Long> roleIds;
     }
 }

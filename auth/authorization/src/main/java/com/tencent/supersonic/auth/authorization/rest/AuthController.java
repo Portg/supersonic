@@ -2,8 +2,11 @@ package com.tencent.supersonic.auth.authorization.rest;
 
 import com.tencent.supersonic.auth.api.authentication.utils.UserHolder;
 import com.tencent.supersonic.auth.api.authorization.pojo.AuthGroup;
+import com.tencent.supersonic.auth.api.authorization.request.BatchAuthGroupReq;
+import com.tencent.supersonic.auth.api.authorization.request.BatchAuthorizeReq;
 import com.tencent.supersonic.auth.api.authorization.request.QueryAuthResReq;
 import com.tencent.supersonic.auth.api.authorization.response.AuthorizedResourceResp;
+import com.tencent.supersonic.auth.api.authorization.response.BatchOperationResult;
 import com.tencent.supersonic.auth.api.authorization.service.AuthService;
 import com.tencent.supersonic.common.pojo.User;
 import jakarta.servlet.http.HttpServletRequest;
@@ -71,5 +74,30 @@ public class AuthController {
             HttpServletRequest request, HttpServletResponse response) {
         User user = UserHolder.findUser(request, response);
         return authService.queryAuthorizedResources(req, user);
+    }
+
+    @PostMapping("/batchCreateGroups")
+    public BatchOperationResult batchCreateGroups(@RequestBody BatchAuthGroupReq req) {
+        return authService.batchCreateAuthGroups(req.getAuthGroups());
+    }
+
+    @PostMapping("/batchUpdateGroups")
+    public BatchOperationResult batchUpdateGroups(@RequestBody BatchAuthGroupReq req) {
+        return authService.batchUpdateAuthGroups(req.getAuthGroups());
+    }
+
+    @PostMapping("/batchRemoveGroups")
+    public BatchOperationResult batchRemoveGroups(@RequestBody List<Integer> groupIds) {
+        return authService.batchRemoveAuthGroups(groupIds);
+    }
+
+    @PostMapping("/batchAuthorize")
+    public BatchOperationResult batchAuthorize(@RequestBody BatchAuthorizeReq req) {
+        return authService.batchAuthorize(req);
+    }
+
+    @PostMapping("/batchRevokeAuthorize")
+    public BatchOperationResult batchRevokeAuthorize(@RequestBody BatchAuthorizeReq req) {
+        return authService.batchRevokeAuthorize(req);
     }
 }

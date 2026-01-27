@@ -1,10 +1,13 @@
 package com.tencent.supersonic.auth.authentication.service;
 
 import com.tencent.supersonic.auth.api.authentication.pojo.Organization;
+import com.tencent.supersonic.auth.api.authentication.pojo.Permission;
 import com.tencent.supersonic.auth.api.authentication.pojo.UserToken;
 import com.tencent.supersonic.auth.api.authentication.request.UserReq;
+import com.tencent.supersonic.auth.api.authentication.service.PermissionService;
 import com.tencent.supersonic.auth.api.authentication.service.UserService;
 import com.tencent.supersonic.auth.api.authentication.utils.UserHolder;
+import com.tencent.supersonic.auth.authentication.persistence.mapper.UserRoleDOMapper;
 import com.tencent.supersonic.auth.authentication.utils.ComponentFactory;
 import com.tencent.supersonic.common.config.SystemConfig;
 import com.tencent.supersonic.common.pojo.User;
@@ -12,18 +15,25 @@ import com.tencent.supersonic.common.service.SystemConfigService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class UserServiceImpl implements UserService {
 
-    private SystemConfigService sysParameterService;
+    private final SystemConfigService sysParameterService;
+    private final PermissionService permissionService;
+    private final UserRoleDOMapper userRoleDOMapper;
 
-    public UserServiceImpl(SystemConfigService sysParameterService) {
+    public UserServiceImpl(SystemConfigService sysParameterService,
+            PermissionService permissionService, UserRoleDOMapper userRoleDOMapper) {
         this.sysParameterService = sysParameterService;
+        this.permissionService = permissionService;
+        this.userRoleDOMapper = userRoleDOMapper;
     }
 
     @Override
@@ -36,8 +46,27 @@ public class UserServiceImpl implements UserService {
                     && systemConfig.getAdmins().contains(user.getName())) {
                 user.setIsAdmin(1);
             }
+            // 填充用户权限
+            fillUserPermissions(user);
         }
         return user;
+    }
+
+    /**
+     * 填充用户权限
+     */
+    private void fillUserPermissions(User user) {
+        List<String> permissions;
+        // 管理员拥有所有权限
+        if (user.getIsAdmin() != null && user.getIsAdmin() == 1) {
+            permissions = permissionService.getAllPermissions().stream().map(Permission::getCode)
+                    .collect(Collectors.toList());
+        } else if (user.getId() != null) {
+            permissions = permissionService.getPermissionCodesByUserId(user.getId());
+        } else {
+            permissions = List.of();
+        }
+        user.setPermissions(permissions);
     }
 
     @Override
@@ -113,5 +142,22 @@ public class UserServiceImpl implements UserService {
     @Override
     public void deleteUserToken(Long id) {
         ComponentFactory.getUserAdaptor().deleteUserToken(id);
+    }
+
+    @Override
+    @Transactional
+    public void assignRolesToUser(Long userId, List<Long> roleIds, String operator) {
+        // 只删除用户的租户级角色，保留平台级角色
+        // 这样租户管理员分配角色时不会影响用户的平台级角色
+        userRoleDOMapper.deleteTenantRolesByUserId(userId);
+        // Insert new role assignments
+        if (!CollectionUtils.isEmpty(roleIds)) {
+            userRoleDOMapper.batchInsert(userId, roleIds, operator);
+        }
+    }
+
+    @Override
+    public List<Long> getUserRoleIds(Long userId) {
+        return userRoleDOMapper.selectRoleIdsByUserId(userId);
     }
 }

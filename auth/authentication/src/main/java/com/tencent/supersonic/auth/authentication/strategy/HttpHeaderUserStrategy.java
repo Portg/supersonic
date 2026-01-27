@@ -59,7 +59,11 @@ public class HttpHeaderUserStrategy implements UserStrategy {
         String displayName = String.valueOf(claims.get(UserConstants.TOKEN_USER_DISPLAY_NAME));
         Integer isAdmin = claims.get(UserConstants.TOKEN_IS_ADMIN) == null ? 0
                 : Integer.parseInt(claims.get(UserConstants.TOKEN_IS_ADMIN).toString());
-        return User.get(userId, userName, displayName, email, isAdmin);
+        Long tenantId = claims.get(UserConstants.TOKEN_TENANT_ID) == null ? null
+                : Long.parseLong(claims.get(UserConstants.TOKEN_TENANT_ID).toString());
+        String role = claims.get(UserConstants.TOKEN_USER_ROLE) == null ? null
+                : String.valueOf(claims.get(UserConstants.TOKEN_USER_ROLE));
+        return User.get(userId, userName, displayName, email, isAdmin, tenantId, role);
     }
 
 }

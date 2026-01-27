@@ -46,4 +46,14 @@ public interface UserService {
     UserToken getUserToken(Long id);
 
     void deleteUserToken(Long id);
+
+    /**
+     * Assign roles to a user (replace all existing roles)
+     */
+    void assignRolesToUser(Long userId, List<Long> roleIds, String operator);
+
+    /**
+     * Get role IDs for a user
+     */
+    List<Long> getUserRoleIds(Long userId);
 }

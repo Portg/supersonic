@@ -1,8 +1,8 @@
 package com.tencent.supersonic.auth.authentication.persistence.repository.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.tencent.supersonic.auth.authentication.persistence.dataobject.UserDO;
-import com.tencent.supersonic.auth.authentication.persistence.dataobject.UserDOExample;
 import com.tencent.supersonic.auth.authentication.persistence.dataobject.UserTokenDO;
 import com.tencent.supersonic.auth.authentication.persistence.mapper.UserDOMapper;
 import com.tencent.supersonic.auth.authentication.persistence.mapper.UserTokenDOMapper;
@@ -10,14 +10,13 @@ import com.tencent.supersonic.auth.authentication.persistence.repository.UserRep
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.Optional;
 
 @Component
 public class UserRepositoryImpl implements UserRepository {
 
-    private UserDOMapper userDOMapper;
+    private final UserDOMapper userDOMapper;
 
-    private UserTokenDOMapper userTokenDOMapper;
+    private final UserTokenDOMapper userTokenDOMapper;
 
     public UserRepositoryImpl(UserDOMapper userDOMapper, UserTokenDOMapper userTokenDOMapper) {
         this.userDOMapper = userDOMapper;
@@ -26,12 +25,12 @@ public class UserRepositoryImpl implements UserRepository {
 
     @Override
     public List<UserDO> getUserList() {
-        return userDOMapper.selectByExample(new UserDOExample());
+        return userDOMapper.selectList(null);
     }
 
     @Override
     public void updateUser(UserDO userDO) {
-        userDOMapper.updateByPrimaryKey(userDO);
+        userDOMapper.updateById(userDO);
     }
 
     @Override
@@ -41,11 +40,17 @@ public class UserRepositoryImpl implements UserRepository {
 
     @Override
     public UserDO getUser(String name) {
-        UserDOExample userDOExample = new UserDOExample();
-        userDOExample.createCriteria().andNameEqualTo(name);
-        List<UserDO> userDOS = userDOMapper.selectByExample(userDOExample);
-        Optional<UserDO> userDOOptional = userDOS.stream().findFirst();
-        return userDOOptional.orElse(null);
+        LambdaQueryWrapper<UserDO> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(UserDO::getName, name);
+        return userDOMapper.selectOne(queryWrapper);
+    }
+
+    @Override
+    public UserDO getUser(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+        return userDOMapper.selectById(userId);
     }
 
     @Override

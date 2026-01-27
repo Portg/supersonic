@@ -7,6 +7,7 @@ import com.tencent.supersonic.common.pojo.User;
 import com.tencent.supersonic.common.pojo.enums.AuthType;
 import com.tencent.supersonic.common.pojo.enums.TypeEnums;
 import com.tencent.supersonic.headless.api.pojo.SchemaElementType;
+import com.tencent.supersonic.headless.api.pojo.SchemaItem;
 import com.tencent.supersonic.headless.api.pojo.enums.TagDefineType;
 import com.tencent.supersonic.headless.api.pojo.request.TagDeleteReq;
 import com.tencent.supersonic.headless.api.pojo.request.TagFilterPageReq;
@@ -163,10 +164,10 @@ public class TagMetaServiceImpl implements TagMetaService {
                             .collect(Collectors.toList());
         }
         if (CollectionUtils.isEmpty(modelRespList)) {
-            return new PageInfo<TagResp>();
+            return new PageInfo<>();
         }
         List<Long> modelIds =
-                modelRespList.stream().map(model -> model.getId()).collect(Collectors.toList());
+                modelRespList.stream().map(SchemaItem::getId).collect(Collectors.toList());
 
         TagFilter tagFilter = new TagFilter();
         BeanUtils.copyProperties(tagMarketPageReq, tagFilter);

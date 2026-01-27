@@ -253,12 +253,7 @@ public abstract class WordBasedSegment extends Segment {
 
         if (this.config.forceCustomDictionary) {
             this.customDictionary.parseText(charArray,
-                    new AhoCorasickDoubleArrayTrie.IHit<CoreDictionary.Attribute>() {
-                        public void hit(int begin, int end, CoreDictionary.Attribute value) {
-                            wordNetStorage.add(begin + 1,
-                                    new Vertex(new String(charArray, begin, end - begin), value));
-                        }
-                    });
+                    (begin, end, value) -> wordNetStorage.add(begin + 1, new Vertex(new String(charArray, begin, end - begin), value)));
         }
 
         LinkedList<Vertex>[] vertexes = wordNetStorage.getVertexes();

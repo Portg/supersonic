@@ -1,6 +1,6 @@
 package com.tencent.supersonic.chat.server.plugin;
 
-import com.tencent.supersonic.chat.server.plugin.build.PluginSemanticQuery;
+import com.tencent.supersonic.chat.server.plugin.support.PluginSemanticQuery;
 
 import java.util.HashMap;
 import java.util.Map;

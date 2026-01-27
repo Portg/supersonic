@@ -40,8 +40,7 @@ public class Term {
     }
 
     public boolean equals(Object obj) {
-        if (obj instanceof Term) {
-            Term term = (Term) obj;
+        if (obj instanceof Term term) {
             if (this.nature == term.nature && this.word.equals(term.word)) {
                 return true;
             }

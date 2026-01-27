@@ -27,28 +27,19 @@ public class QueryFilterParser {
         FilterOperatorEnum operator = filter.getOperator();
         Object value = filter.getValue();
 
-        switch (operator) {
-            case IN:
-            case NOT_IN:
-                return column + " " + operator.getValue() + " (" + parseList(value) + ")";
-            case BETWEEN:
-                if (value instanceof List && ((List<?>) value).size() == 2) {
-                    List<?> values = (List<?>) value;
-                    return column + " BETWEEN " + formatValue(values.get(0)) + " AND "
-                            + formatValue(values.get(1));
+        return switch (operator) {
+            case IN, NOT_IN -> column + " " + operator.getValue() + " (" + parseList(value) + ")";
+            case BETWEEN -> {
+                if (value instanceof List<?> values && values.size() == 2) {
+                    yield column + " BETWEEN " + formatValue(values.get(0)) + " AND " + formatValue(values.get(1));
                 }
-                throw new IllegalArgumentException(
-                        "BETWEEN operator requires a list of two values");
-            case IS_NULL:
-            case IS_NOT_NULL:
-                return column + " " + operator.getValue();
-            case EXISTS:
-                return "EXISTS (" + value + ")";
-            case SQL_PART:
-                return value.toString();
-            default:
-                return column + " " + operator.getValue() + " " + formatValue(value);
-        }
+                throw new IllegalArgumentException("BETWEEN operator requires a list of two values");
+            }
+            case IS_NULL, IS_NOT_NULL -> column + " " + operator.getValue();
+            case EXISTS -> "EXISTS (" + value + ")";
+            case SQL_PART -> value.toString();
+            default -> column + " " + operator.getValue() + " " + formatValue(value);
+        };
     }
 
     private static String parseList(Object value) {

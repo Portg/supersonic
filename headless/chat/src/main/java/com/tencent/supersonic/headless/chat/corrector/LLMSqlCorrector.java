@@ -29,8 +29,7 @@ public class LLMSqlCorrector extends BaseSemanticCorrector {
     private static final Logger keyPipelineLog = LoggerFactory.getLogger("keyPipeline");
 
     public static final String APP_KEY = "S2SQL_CORRECTOR";
-    private static final String INSTRUCTION = ""
-            + "#Role: You are a senior data engineer experienced in writing SQL."
+    private static final String INSTRUCTION = "#Role: You are a senior data engineer experienced in writing SQL."
             + "\n#Task: Your will be provided with a user question and the SQL written by a junior engineer,"
             + "please take a review and help correct it if necessary." + "\n#Rules: "
             + "1.ALWAYS specify time range using `>`,`<`,`>=`,`<=` operator."

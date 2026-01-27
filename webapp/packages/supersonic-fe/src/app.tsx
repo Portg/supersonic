@@ -34,11 +34,25 @@ Spin.setDefaultIndicator(
 
 const getAuthCodes = (params: any) => {
   const { currentUser } = params;
-  const codes = [];
+
+  // 如果用户是超级管理员，返回所有权限码
   if (currentUser?.superAdmin) {
-    codes.push(ROUTE_AUTH_CODES.SYSTEM_ADMIN);
+    return Object.values(ROUTE_AUTH_CODES);
   }
-  return codes;
+
+  // 否则返回后端返回的权限列表
+  // 后端 User 对象包含 permissions 字段
+  const permissions = currentUser?.permissions || [];
+
+  // 同时兼容旧的 SYSTEM_ADMIN 逻辑
+  if (currentUser?.isAdmin === 1) {
+    // 管理员拥有 SYSTEM_ADMIN 权限
+    if (!permissions.includes(ROUTE_AUTH_CODES.SYSTEM_ADMIN)) {
+      permissions.push(ROUTE_AUTH_CODES.SYSTEM_ADMIN);
+    }
+  }
+
+  return permissions;
 };
 
 export async function getInitialState(): Promise<{

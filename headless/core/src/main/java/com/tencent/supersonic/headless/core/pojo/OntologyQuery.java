@@ -9,6 +9,7 @@ import com.tencent.supersonic.headless.api.pojo.response.MetricSchemaResp;
 import com.tencent.supersonic.headless.api.pojo.response.ModelResp;
 import lombok.Data;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -32,22 +33,18 @@ public class OntologyQuery {
     private String sql;
 
     public Set<ModelResp> getModels() {
-        return modelMap.values().stream().collect(Collectors.toSet());
+        return new HashSet<>(modelMap.values());
     }
 
     public Set<DimSchemaResp> getDimensions() {
         Set<DimSchemaResp> dimensions = Sets.newHashSet();
-        dimensionMap.entrySet().forEach(entry -> {
-            dimensions.addAll(entry.getValue());
-        });
+        dimensionMap.forEach((key, value) -> dimensions.addAll(value));
         return dimensions;
     }
 
     public Set<MetricSchemaResp> getMetrics() {
         Set<MetricSchemaResp> metrics = Sets.newHashSet();
-        metricMap.entrySet().forEach(entry -> {
-            metrics.addAll(entry.getValue());
-        });
+        metricMap.forEach((key, value) -> metrics.addAll(value));
         return metrics;
     }
 

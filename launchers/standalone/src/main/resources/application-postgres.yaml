@@ -1,17 +1,25 @@
 spring:
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://${S2_DB_HOST:localhost}:${S2_DB_PORT:5432}/${S2_DB_DATABASE:postgres}?stringtype=unspecified
+    url: jdbc:postgresql://${S2_DB_HOST:localhost}:${S2_DB_PORT:15432}/${S2_DB_DATABASE:postgres}?stringtype=unspecified
     username: ${S2_DB_USER:postgres}
     password: ${S2_DB_PASSWORD:postgres}
   sql:
     init:
       continue-on-error: true
-      mode: always
+      mode: never
       username: ${S2_DB_USER:postgres}
       password: ${S2_DB_PASSWORD:postgres}
       schema-locations: classpath:db/schema-postgres.sql,classpath:db/schema-postgres-demo.sql
       data-locations: classpath:db/data-postgres.sql,classpath:db/data-postgres-demo.sql
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: ${FLYWAY_BASELINE_VERSION:-1}
+    locations: classpath:db/migration/postgresql
+    table: flyway_schema_history
+    out-of-order: false
+    validate-on-migrate: true
 
 s2:
   embedding:
@@ -19,7 +27,7 @@ s2:
       provider: PGVECTOR
       base:
         url: ${S2_DB_HOST:127.0.0.1}
-      port: ${S2_DB_PORT:5432}
+      port: ${S2_DB_PORT:15432}
       databaseName: ${S2_DB_DATABASE:postgres}
       user: ${S2_DB_USER:postgres}
       password: ${S2_DB_PASSWORD:postgres}

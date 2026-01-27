@@ -51,7 +51,7 @@ public class StatRepositoryImpl implements StatRepository {
         List<ItemUseResp> result = new ArrayList<>();
         List<QueryStatDO> statInfos = getQueryStats(itemUseReq);
         Map<String, Long> map = new ConcurrentHashMap<>();
-        statInfos.stream().forEach(stat -> {
+        statInfos.forEach(stat -> {
             String dimensions = stat.getDimensions();
             String metrics = stat.getMetrics();
             if (Objects.nonNull(stat.getDataSetId())) {
@@ -97,8 +97,9 @@ public class StatRepositoryImpl implements StatRepository {
         if (StringUtils.isNotEmpty(dimensions)) {
             try {
                 List<String> dimensionList =
-                        mapper.readValue(dimensions, new TypeReference<List<String>>() {});
-                dimensionList.stream().forEach(dimension -> {
+                        mapper.readValue(dimensions, new TypeReference<>() {
+                        });
+                dimensionList.forEach(dimension -> {
                     String key = dataSetId + AT_SYMBOL + AT_SYMBOL + type + AT_SYMBOL + AT_SYMBOL
                             + dimension;
                     if (map.containsKey(key)) {

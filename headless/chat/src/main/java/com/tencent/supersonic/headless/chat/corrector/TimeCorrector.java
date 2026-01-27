@@ -96,7 +96,7 @@ public class TimeCorrector extends BaseSemanticCorrector {
             Expression expression = CCJSqlParserUtil.parseCondExpression(condition);
             return SqlAddHelper.addWhere(sql, expression);
         } catch (JSQLParserException e) {
-            log.error("addConditionToSQL:{}", e);
+            log.error("addConditionToSQL", e);
             return sql;
         }
     }

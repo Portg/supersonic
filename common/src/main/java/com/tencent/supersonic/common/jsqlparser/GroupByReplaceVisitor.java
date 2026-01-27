@@ -26,8 +26,7 @@ public class GroupByReplaceVisitor implements GroupByVisitor {
         ExpressionList groupByExpressionList = groupByElement.getGroupByExpressionList();
         List<Expression> groupByExpressions = groupByExpressionList.getExpressions();
 
-        for (int i = 0; i < groupByExpressions.size(); i++) {
-            Expression expression = groupByExpressions.get(i);
+        for (Expression expression : groupByExpressions) {
             replaceExpression(expression);
         }
     }

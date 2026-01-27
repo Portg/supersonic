@@ -344,8 +344,8 @@ public class HttpClientUtils {
         StringBuilder headsString = new StringBuilder("");
         Header[] heads = request.getAllHeaders();
         if (heads != null) {
-            for (int i = 0; i < heads.length; i++) {
-                headsString.append(heads[i]).append(" , ");
+            for (Header head : heads) {
+                headsString.append(head).append(" , ");
             }
         }
         return headsString.toString();
@@ -361,7 +361,7 @@ public class HttpClientUtils {
     public static void packageParam(Map<String, String> params,
             HttpEntityEnclosingRequestBase httpMethod) throws UnsupportedEncodingException {
         if (params != null) {
-            List<NameValuePair> nvps = new ArrayList<NameValuePair>();
+            List<NameValuePair> nvps = new ArrayList<>();
             Set<Map.Entry<String, String>> entrySet = params.entrySet();
             for (Map.Entry<String, String> entry : entrySet) {
                 nvps.add(new BasicNameValuePair(entry.getKey(), entry.getValue()));

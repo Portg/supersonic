@@ -43,7 +43,7 @@ public class SqlRemoveHelper {
         try {
             Matcher matcher = pattern.matcher(sql);
 
-            StringBuffer result = new StringBuffer();
+            StringBuilder result = new StringBuilder();
             while (matcher.find()) {
                 matcher.appendReplacement(result,
                         matcher.group(1) + matcher.group(2) + matcher.group(3));

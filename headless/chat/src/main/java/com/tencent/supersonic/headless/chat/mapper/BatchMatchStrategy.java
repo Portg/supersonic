@@ -26,10 +26,10 @@ public abstract class BatchMatchStrategy<T extends MapResult> extends BaseMatchS
         Set<String> detectSegments = new HashSet<>();
 
         int embeddingTextSize = Integer
-                .valueOf(mapperConfig.getParameterValue(MapperConfig.EMBEDDING_MAPPER_TEXT_SIZE));
+                .parseInt(mapperConfig.getParameterValue(MapperConfig.EMBEDDING_MAPPER_TEXT_SIZE));
 
         int embeddingTextStep = Integer
-                .valueOf(mapperConfig.getParameterValue(MapperConfig.EMBEDDING_MAPPER_TEXT_STEP));
+                .parseInt(mapperConfig.getParameterValue(MapperConfig.EMBEDDING_MAPPER_TEXT_STEP));
 
         for (int startIndex = 0; startIndex < text.length(); startIndex += embeddingTextStep) {
             int endIndex = Math.min(startIndex + embeddingTextSize, text.length());

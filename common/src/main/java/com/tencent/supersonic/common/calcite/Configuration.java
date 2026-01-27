@@ -118,14 +118,14 @@ public class Configuration {
             SqlValidator sqlValidator, RelOptPlanner relOptPlanner, EngineType engineType) {
         RexBuilder rexBuilder = new RexBuilder(typeFactory);
         RelOptCluster cluster = RelOptCluster.create(relOptPlanner, rexBuilder);
-        FrameworkConfig fromworkConfig =
+        FrameworkConfig frameworkConfig =
                 Frameworks.newConfigBuilder().parserConfig(getParserConfig(engineType))
                         .defaultSchema(
                                 scope.getValidator().getCatalogReader().getRootSchema().plus())
                         .build();
         return new SqlToRelConverter(new ViewExpanderImpl(), sqlValidator,
                 (CatalogReader) scope.getValidator().getCatalogReader(), cluster,
-                fromworkConfig.getConvertletTable(), getConverterConfig());
+                frameworkConfig.getConvertletTable(), getConverterConfig());
     }
 
     public static SqlAdvisor getSqlAdvisor(SqlValidatorWithHints validator, EngineType engineType) {

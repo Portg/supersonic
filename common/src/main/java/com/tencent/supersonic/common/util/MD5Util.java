@@ -56,9 +56,9 @@ public class MD5Util {
 
     public static String byteToString(byte[] bytes) {
         int i;
-        StringBuffer buffer = new StringBuffer("");
-        for (int offset = 0; offset < bytes.length; offset++) {
-            i = bytes[offset];
+        StringBuilder buffer = new StringBuilder();
+        for (byte aByte : bytes) {
+            i = aByte;
             if (i < 0) {
                 i += 256;
             }

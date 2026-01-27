@@ -140,13 +140,7 @@ public abstract class BaseNode<V> implements Comparable<BaseNode> {
      * @return
      */
     public int compareTo(char other) {
-        if (this.c > other) {
-            return 1;
-        }
-        if (this.c < other) {
-            return -1;
-        }
-        return 0;
+        return Character.compare(this.c, other);
     }
 
     /**

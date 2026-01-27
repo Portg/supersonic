@@ -10,12 +10,14 @@ import com.tencent.supersonic.headless.api.pojo.QueryDataType;
 import com.tencent.supersonic.headless.api.pojo.SemanticParseInfo;
 import com.tencent.supersonic.headless.api.pojo.enums.MapModeEnum;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+@EqualsAndHashCode(callSuper = true)
 @Data
 public class QueryNLReq extends SemanticQueryReq implements Serializable {
     private Long queryId;
@@ -35,15 +37,8 @@ public class QueryNLReq extends SemanticQueryReq implements Serializable {
 
     @Override
     public String toCustomizedString() {
-        StringBuilder stringBuilder = new StringBuilder("{");
-        stringBuilder.append("\"queryText\":").append(dataSetId);
-        stringBuilder.append("\"dataSetId\":").append(dataSetId);
-        stringBuilder.append("\"modelIds\":").append(modelIds);
-        stringBuilder.append(",\"params\":").append(params);
-        stringBuilder.append(",\"cacheInfo\":").append(cacheInfo);
-        stringBuilder.append(",\"mapMode\":").append(mapModeEnum);
-        stringBuilder.append(",\"dataType\":").append(queryDataType);
-        stringBuilder.append('}');
-        return stringBuilder.toString();
+        return "{" + "\"queryText\":" + dataSetId + "\"dataSetId\":" + dataSetId + "\"modelIds\":" + modelIds
+                + ",\"params\":" + params + ",\"cacheInfo\":" + cacheInfo + ",\"mapMode\":" + mapModeEnum
+                + ",\"dataType\":" + queryDataType + '}';
     }
 }

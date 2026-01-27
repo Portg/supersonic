@@ -63,10 +63,7 @@ public class SqlValidHelper {
         List<FieldExpression> otherOrderByExpressions =
                 SqlSelectHelper.getOrderByExpressions(otherSql);
 
-        if (!CollectionUtils.isEqualCollection(thisOrderByExpressions, otherOrderByExpressions)) {
-            return false;
-        }
-        return true;
+        return CollectionUtils.isEqualCollection(thisOrderByExpressions, otherOrderByExpressions);
     }
 
     public static boolean isValidSQL(String sql) {

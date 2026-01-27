@@ -204,21 +204,21 @@ public class JdbcDataSource {
 
             // default validation query
             String driverName = druidDataSource.getDriverClassName();
-            if (driverName.indexOf("sqlserver") != -1 || driverName.indexOf("mysql") != -1
-                    || driverName.indexOf("h2") != -1 || driverName.indexOf("moonbox") != -1) {
+            if (driverName.contains("sqlserver") || driverName.contains("mysql")
+                    || driverName.contains("h2") || driverName.contains("moonbox")) {
                 druidDataSource.setValidationQuery("select 1");
             }
 
-            if (driverName.indexOf("oracle") != -1) {
+            if (driverName.contains("oracle")) {
                 druidDataSource.setValidationQuery("select 1 from dual");
             }
 
-            if (driverName.indexOf("elasticsearch") != -1) {
+            if (driverName.contains("elasticsearch")) {
                 druidDataSource.setValidationQuery(null);
             }
 
             Properties properties = new Properties();
-            if (driverName.indexOf("mysql") != -1) {
+            if (driverName.contains("mysql")) {
                 properties.setProperty("druid.mysql.usePingMethod", "false");
             }
 

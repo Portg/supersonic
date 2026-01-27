@@ -15,6 +15,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -24,7 +25,7 @@ import java.util.stream.Collectors;
 /** 使用DoubleArrayTrie实现的核心词典 */
 public class CoreDictionary {
 
-    public static DoubleArrayTrie<Attribute> trie = new DoubleArrayTrie<Attribute>();
+    public static DoubleArrayTrie<Attribute> trie = new DoubleArrayTrie<>();
 
     public static final String PATH = HanLP.Config.CoreDictionaryPath;
 
@@ -53,10 +54,10 @@ public class CoreDictionary {
         if (loadDat(path)) {
             return true;
         }
-        TreeMap<String, Attribute> map = new TreeMap<String, Attribute>();
+        TreeMap<String, Attribute> map = new TreeMap<>();
         BufferedReader br = null;
         try {
-            br = new BufferedReader(new InputStreamReader(IOUtil.newInputStream(path), "UTF-8"));
+            br = new BufferedReader(new InputStreamReader(IOUtil.newInputStream(path), StandardCharsets.UTF_8));
             String line;
             int totalFrequency = 0;
             long start = System.currentTimeMillis();

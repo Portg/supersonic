@@ -73,11 +73,10 @@ public abstract class BaseSemanticCorrector implements SemanticCorrector {
         Long dataSetId = semanticParseInfo.getDataSet().getDataSetId();
         List<SchemaElement> metrics = getMetricElements(chatQueryContext, dataSetId);
 
-        Map<String, String> metricToAggregate = metrics.stream().map(schemaElement -> {
+        Map<String, String> metricToAggregate = metrics.stream().peek(schemaElement -> {
             if (Objects.isNull(schemaElement.getDefaultAgg())) {
                 schemaElement.setDefaultAgg(AggregateTypeEnum.SUM.name());
             }
-            return schemaElement;
         }).flatMap(schemaElement -> {
             Set<String> elements = new HashSet<>();
             elements.add(schemaElement.getName());
@@ -102,16 +101,14 @@ public abstract class BaseSemanticCorrector implements SemanticCorrector {
     }
 
     protected Set<String> getDimensions(Long dataSetId, SemanticSchema semanticSchema) {
-        Set<String> dimensions =
-                semanticSchema.getDimensions(dataSetId).stream().flatMap(schemaElement -> {
-                    Set<String> elements = new HashSet<>();
-                    elements.add(schemaElement.getName());
-                    if (!CollectionUtils.isEmpty(schemaElement.getAlias())) {
-                        elements.addAll(schemaElement.getAlias());
-                    }
-                    return elements.stream();
-                }).collect(Collectors.toSet());
-        return dimensions;
+        return semanticSchema.getDimensions(dataSetId).stream().flatMap(schemaElement -> {
+            Set<String> elements = new HashSet<>();
+            elements.add(schemaElement.getName());
+            if (!CollectionUtils.isEmpty(schemaElement.getAlias())) {
+                elements.addAll(schemaElement.getAlias());
+            }
+            return elements.stream();
+        }).collect(Collectors.toSet());
     }
 
     protected boolean containsPartitionDimensions(ChatQueryContext chatQueryContext,
@@ -128,7 +125,7 @@ public abstract class BaseSemanticCorrector implements SemanticCorrector {
         Set<String> removeFieldNames = new HashSet<>();
         Map<String, String> fieldNameMap =
                 getFieldNameMapFromDB(chatQueryContext, semanticParseInfo.getDataSetId());
-        removeFieldNames.removeIf(fieldName -> fieldNameMap.containsKey(fieldName));
+        removeFieldNames.removeIf(fieldNameMap::containsKey);
         if (!CollectionUtils.isEmpty(removeFieldNames)) {
             correctS2SQL = SqlRemoveHelper.removeWhereCondition(correctS2SQL, removeFieldNames);
             correctS2SQL = SqlRemoveHelper.removeSelect(correctS2SQL, removeFieldNames);

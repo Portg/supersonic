@@ -48,7 +48,7 @@ public class S2SmallTalkDemo extends S2BaseDemo {
     @Override
     protected boolean checkNeedToRun() {
         List<String> agentNames =
-                agentService.getAgents().stream().map(Agent::getName).collect(Collectors.toList());
+                agentService.getAgents().stream().map(Agent::getName).toList();
         return !agentNames.contains("闲聊助手");
     }
 

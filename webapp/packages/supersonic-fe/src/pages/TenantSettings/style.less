@@ -1,0 +1,74 @@
+.container {
+  padding: 24px;
+  background: #f0f2f5;
+  min-height: calc(100vh - 64px);
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 400px;
+}
+
+.card {
+  margin-bottom: 16px;
+}
+
+.tenantStatus {
+  display: flex;
+  align-items: center;
+  padding: 16px 0;
+  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 16px;
+}
+
+.tenantInfo {
+  margin-left: 16px;
+
+  h3 {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  p {
+    margin: 4px 0;
+    color: #666;
+    font-size: 14px;
+  }
+}
+
+.statusActive {
+  color: #52c41a;
+  font-weight: 500;
+}
+
+.statusInactive {
+  color: #ff4d4f;
+  font-weight: 500;
+}
+
+.subscriptionInfo {
+  margin-top: 16px;
+}
+
+.usageCard {
+  text-align: center;
+  padding: 16px;
+}
+
+.quotaCard {
+  margin-bottom: 16px;
+
+  :global {
+    .ant-statistic-title {
+      font-size: 14px;
+      color: #666;
+    }
+
+    .ant-statistic-content {
+      font-size: 24px;
+    }
+  }
+}

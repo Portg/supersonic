@@ -147,14 +147,11 @@ public class SqlUtils {
     }
 
     private Object getValue(Object value) {
-        if (value instanceof LocalDate) {
-            LocalDate localDate = (LocalDate) value;
+        if (value instanceof LocalDate localDate) {
             return localDate.format(DateTimeFormatter.ofPattern(DateUtils.DEFAULT_DATE_FORMAT));
-        } else if (value instanceof LocalDateTime) {
-            LocalDateTime localDateTime = (LocalDateTime) value;
+        } else if (value instanceof LocalDateTime localDateTime) {
             return localDateTime.format(DateTimeFormatter.ofPattern(DateUtils.DEFAULT_TIME_FORMAT));
-        } else if (value instanceof Date) {
-            Date date = (Date) value;
+        } else if (value instanceof Date date) {
             return DateUtils.format(date);
         } else if (value instanceof byte[]) {
             return new String((byte[]) value);

@@ -15,10 +15,28 @@ export default {
   'menu.tag.tagDetail': '标签详情页',
   'menu.database': '数据库管理',
   'menu.llm': '大模型管理',
+  'menu.semanticTemplate': '语义模板',
   'menu.chatSetting': '问答设置',
   'menu.plugin': '插件管理',
   'menu.login': '登录',
-  'menu.system': '系统设置',
   'menu.chat': '问答对话',
   'menu.agent': '助理管理',
+  // ========== 平台管理 (Platform Admin) ==========
+  'menu.platform': '平台管理',
+  'menu.platform.tenants': '租户管理',
+  'menu.platform.subscriptions': '订阅计划',
+  'menu.platform.platformRoles': '平台角色',
+  'menu.platform.platformPermissions': '平台权限',
+  'menu.platform.platformSettings': '系统设置',
+
+  // ========== 租户管理 (Tenant Admin) ==========
+  'menu.tenant': '租户管理',
+  'menu.tenant.organization': '组织架构',
+  'menu.tenant.members': '成员管理',
+  'menu.tenant.tenantRoles': '角色管理',
+  'menu.tenant.tenantPermissions': '权限管理',
+  'menu.tenant.tenantSettings': '租户设置',
+  'menu.tenant.usage': '用量统计',
+
+  'menu.datasetPermission': '数据集权限',
 };

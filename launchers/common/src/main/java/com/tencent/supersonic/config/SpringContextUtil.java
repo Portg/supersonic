@@ -25,7 +25,7 @@ public class SpringContextUtil implements ApplicationContextAware {
 
     public static String getActiveProfile() {
         String[] profiles = applicationContext.getEnvironment().getActiveProfiles();
-        if (profiles != null && profiles.length > 0) {
+        if (profiles.length > 0) {
             return profiles[0];
         }
 

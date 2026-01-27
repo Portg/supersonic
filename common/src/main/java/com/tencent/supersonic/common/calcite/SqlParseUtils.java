@@ -198,8 +198,8 @@ public class SqlParseUtils {
             default:
                 if (field instanceof SqlBasicCall) {
                     List<SqlNode> operandList2 = ((SqlBasicCall) field).getOperandList();
-                    for (int i = 0; i < operandList2.size(); i++) {
-                        fields.addAll(handlerField(operandList2.get(i)));
+                    for (SqlNode sqlNode : operandList2) {
+                        fields.addAll(handlerField(sqlNode));
                     }
                 }
                 if (field instanceof SqlNodeList) {
@@ -222,8 +222,7 @@ public class SqlParseUtils {
 
         SqlNodeList selectList = ((SqlSelect) sqlNode).getSelectList();
         for (SqlNode node : selectList) {
-            if (node instanceof SqlBasicCall) {
-                SqlBasicCall sqlBasicCall = (SqlBasicCall) node;
+            if (node instanceof SqlBasicCall sqlBasicCall) {
 
                 List<SqlNode> operandList = sqlBasicCall.getOperandList();
                 if (CollectionUtils.isNotEmpty(operandList) && operandList.size() == 1) {

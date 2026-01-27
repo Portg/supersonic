@@ -68,19 +68,18 @@ public class HdfsFileHelper {
         log.info("CustomDictionaryPath:{}", fileList);
         Config.CustomDictionaryPath = fileList.toArray(new String[0]);
         customDictionary.path =
-                (Config.CustomDictionaryPath == null || Config.CustomDictionaryPath.length == 0)
+                Config.CustomDictionaryPath.length == 0
                         ? path
                         : Config.CustomDictionaryPath;
-        if (Config.CustomDictionaryPath == null || Config.CustomDictionaryPath.length == 0) {
+        if (Config.CustomDictionaryPath.length == 0) {
             Config.CustomDictionaryPath = path;
         }
     }
 
     public static List<String> getFileList(FileSystem fs, Path folderPath) throws IOException {
-        List<String> paths = new ArrayList();
+        List<String> paths = new ArrayList<>();
         FileStatus[] fileStatuses = fs.globStatus(folderPath);
-        for (int i = 0; i < fileStatuses.length; i++) {
-            FileStatus fileStatus = fileStatuses[i];
+        for (FileStatus fileStatus : fileStatuses) {
             paths.add(fileStatus.getPath().toString());
         }
         return paths;

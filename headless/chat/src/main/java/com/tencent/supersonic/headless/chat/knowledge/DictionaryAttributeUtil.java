@@ -32,20 +32,14 @@ public class DictionaryAttributeUtil {
                 originalMap.put(add.nature[i], add.originals[i]);
             }
         });
-        List<Map.Entry<Nature, Integer>> list =
-                new LinkedList<Map.Entry<Nature, Integer>>(map.entrySet());
-        Collections.sort(list, new Comparator<Map.Entry<Nature, Integer>>() {
-            public int compare(Map.Entry<Nature, Integer> o1, Map.Entry<Nature, Integer> o2) {
-                return o2.getValue() - o1.getValue();
-            }
-        });
+        List<Map.Entry<Nature, Integer>> list = new LinkedList<>(map.entrySet());
+        list.sort((o1, o2) -> o2.getValue() - o1.getValue());
         String[] originals =
                 list.stream().map(l -> originalMap.get(l.getKey())).toArray(String[]::new);
-        CoreDictionary.Attribute attribute = new CoreDictionary.Attribute(
-                list.stream().map(i -> i.getKey()).collect(Collectors.toList())
+        return new CoreDictionary.Attribute(
+                list.stream().map(Map.Entry::getKey).toList()
                         .toArray(new Nature[0]),
-                list.stream().map(i -> i.getValue()).mapToInt(Integer::intValue).toArray(),
-                originals, list.stream().map(i -> i.getValue()).findFirst().get());
-        return attribute;
+                list.stream().map(Map.Entry::getValue).mapToInt(Integer::intValue).toArray(),
+                originals, list.stream().map(Map.Entry::getValue).findFirst().get());
     }
 }

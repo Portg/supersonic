@@ -26,13 +26,7 @@ import org.springframework.util.ResourceUtils;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /** HanLP helper */
@@ -249,12 +243,11 @@ public class HanlpHelper {
             return false;
         }
         boolean isAdd = false;
-        if (mapResult instanceof HanlpMapResult) {
-            HanlpMapResult hanlpMapResult = (HanlpMapResult) mapResult;
+        if (mapResult instanceof HanlpMapResult hanlpMapResult) {
             for (String nature : hanlpMapResult.getNatures()) {
                 String orig = attribute.getOriginal(Nature.fromString(nature));
                 if (orig != null) {
-                    MapResult addMapResult = new HanlpMapResult(orig, Arrays.asList(nature),
+                    MapResult addMapResult = new HanlpMapResult(orig, Collections.singletonList(nature),
                             hanlpMapResult.getDetectWord(), hanlpMapResult.getSimilarity());
                     mapResults.add((T) addMapResult);
                     isAdd = true;
@@ -268,8 +261,7 @@ public class HanlpHelper {
             return false;
         }
 
-        if (mapResult instanceof DatabaseMapResult) {
-            DatabaseMapResult dbMapResult = (DatabaseMapResult) mapResult;
+        if (mapResult instanceof DatabaseMapResult dbMapResult) {
             for (String orig : originals) {
                 DatabaseMapResult addMapResult = new DatabaseMapResult();
                 addMapResult.setName(orig);
@@ -278,8 +270,7 @@ public class HanlpHelper {
                 mapResults.add((T) addMapResult);
                 isAdd = true;
             }
-        } else if (mapResult instanceof EmbeddingResult) {
-            EmbeddingResult embeddingResult = (EmbeddingResult) mapResult;
+        } else if (mapResult instanceof EmbeddingResult embeddingResult) {
             for (String orig : originals) {
                 EmbeddingResult addMapResult = new EmbeddingResult();
                 addMapResult.setName(orig);

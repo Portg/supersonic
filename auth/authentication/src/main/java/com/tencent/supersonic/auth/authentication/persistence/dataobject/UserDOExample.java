@@ -21,7 +21,7 @@ public class UserDOExample {
 
     /** @mbg.generated */
     public UserDOExample() {
-        oredCriteria = new ArrayList<Criteria>();
+        oredCriteria = new ArrayList<>();
     }
 
     /** @mbg.generated */
@@ -109,7 +109,7 @@ public class UserDOExample {
 
         protected GeneratedCriteria() {
             super();
-            criteria = new ArrayList<Criterion>();
+            criteria = new ArrayList<>();
         }
 
         public boolean isValid() {

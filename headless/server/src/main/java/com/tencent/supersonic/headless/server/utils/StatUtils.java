@@ -103,7 +103,7 @@ public class StatUtils {
         List<String> dimensions = queryTagReq.getGroups();
 
         List<String> metrics = new ArrayList<>();
-        queryTagReq.getAggregators().stream()
+        queryTagReq.getAggregators()
                 .forEach(aggregator -> metrics.add(aggregator.getColumn()));
         String user = getUserName(facadeUser);
 
@@ -154,7 +154,7 @@ public class StatUtils {
                 queryStatInfo.setModelId(querySqlReq.getModelIds().get(0));
             }
         } catch (JsonProcessingException e) {
-            log.error("initStatInfo:{}", e);
+            log.error("initStatInfo", e);
         }
         StatUtils.set(queryStatInfo);
     }
@@ -165,7 +165,7 @@ public class StatUtils {
         List<String> dimensions = queryStructReq.getGroups();
 
         List<String> metrics = new ArrayList<>();
-        queryStructReq.getAggregators().stream()
+        queryStructReq.getAggregators()
                 .forEach(aggregator -> metrics.add(aggregator.getColumn()));
         String user = getUserName(facadeUser);
 

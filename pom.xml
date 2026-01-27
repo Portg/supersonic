@@ -12,6 +12,7 @@
     <modules>
         <module>common</module>
         <module>auth</module>
+        <module>billing</module>
         <module>chat</module>
         <module>launchers</module>
         <module>headless</module>

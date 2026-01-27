@@ -22,7 +22,7 @@ public class DomainDOExample {
 
     /** @mbg.generated */
     public DomainDOExample() {
-        oredCriteria = new ArrayList<Criteria>();
+        oredCriteria = new ArrayList<>();
     }
 
     /** @mbg.generated */
@@ -110,7 +110,7 @@ public class DomainDOExample {
 
         protected GeneratedCriteria() {
             super();
-            criteria = new ArrayList<Criterion>();
+            criteria = new ArrayList<>();
         }
 
         public boolean isValid() {

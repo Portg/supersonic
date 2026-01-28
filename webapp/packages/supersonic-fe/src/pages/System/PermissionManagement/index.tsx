@@ -214,7 +214,7 @@ const PermissionManagement: React.FC = () => {
         destroyOnClose
         width={600}
       >
-        <Form form={form} layout="vertical">
+        <Form form={form} layout="vertical" name="sysPermissionForm">
           <Form.Item
             name="name"
             label="权限名称"

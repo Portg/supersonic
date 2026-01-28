@@ -106,7 +106,7 @@ const TemplateFormModal: React.FC<TemplateFormModalProps> = ({
       cancelText="取消"
       width={600}
     >
-      <Form form={form} layout="vertical">
+      <Form form={form} layout="vertical" name="templateForm">
         <Form.Item
           name="name"
           label="模板名称"

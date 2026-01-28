@@ -64,7 +64,7 @@ const CreateEntityModal = (props: Props) => {
       centered
       destroyOnClose={true}
     >
-      <Form form={form}>
+      <Form form={form} name="createNodeForm">
         <Form.Item
           {...formItemLayout}
           name="entityType"

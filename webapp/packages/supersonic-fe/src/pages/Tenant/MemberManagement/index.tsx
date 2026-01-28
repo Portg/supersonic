@@ -250,7 +250,7 @@ const MemberManagement: React.FC = () => {
         okText="确定"
         cancelText="取消"
       >
-        <Form form={form} layout="vertical">
+        <Form form={form} layout="vertical" name="memberForm">
           <Form.Item
             name="organizationId"
             label="选择组织"

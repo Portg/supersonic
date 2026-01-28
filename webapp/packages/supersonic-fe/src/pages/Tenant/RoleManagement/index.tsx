@@ -275,7 +275,7 @@ const TenantRoleManagement: React.FC = () => {
         okText="确定"
         cancelText="取消"
       >
-        <Form form={form} layout="vertical" initialValues={{ status: true }}>
+        <Form form={form} layout="vertical" name="tenantRoleForm" initialValues={{ status: true }}>
           <Form.Item
             name="code"
             label="角色编码"

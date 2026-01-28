@@ -191,7 +191,7 @@ const Conversation: ForwardRefRenderFunction<any, Props> = (
                         </div>
                       </div>
                       <div className={styles.bottomSection}>
-                        <div className={styles.subTitle}>{item.lastQuestion}</div>
+                        {item.lastQuestion && <div className={styles.subTitle}>{item.lastQuestion}</div>}
                         <DeleteOutlined
                           className={styles.deleteIcon}
                           onClick={e => {

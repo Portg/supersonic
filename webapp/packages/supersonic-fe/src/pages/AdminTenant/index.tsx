@@ -396,7 +396,7 @@ const AdminTenant: React.FC = () => {
         onCancel={() => setModalVisible(false)}
         width={700}
       >
-        <Form form={form} layout="vertical">
+        <Form form={form} layout="vertical" name="tenantForm">
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
@@ -619,7 +619,7 @@ const AdminTenant: React.FC = () => {
         okText="确认分配"
         cancelText="取消"
       >
-        <Form form={subscriptionForm} layout="vertical">
+        <Form form={subscriptionForm} layout="vertical" name="subscriptionForm">
           <Form.Item
             name="planId"
             label="订阅计划"

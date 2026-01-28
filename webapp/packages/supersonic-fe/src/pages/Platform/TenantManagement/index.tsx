@@ -200,7 +200,7 @@ const TenantManagement: React.FC = () => {
         okText="确定"
         cancelText="取消"
       >
-        <Form form={form} layout="vertical">
+        <Form form={form} layout="vertical" name="platformTenantForm">
           <Form.Item
             name="name"
             label="租户标识"

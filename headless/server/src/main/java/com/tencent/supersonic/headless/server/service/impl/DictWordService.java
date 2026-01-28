@@ -86,12 +86,12 @@ public class DictWordService {
         if (CollectionUtils.isEmpty(metas)) {
             return metas;
         }
-        if (SchemaElementType.TERM.equals(metas.get(0).getType())) {
+        if (SchemaElementType.TERM.equals(metas.getFirst().getType())) {
             return metas;
         }
-        return metas.stream()
+        return new ArrayList<>(metas.stream()
                 .collect(
                         Collectors.toMap(SchemaElement::getId, Function.identity(), (e1, e2) -> e1))
-                .values().stream().collect(Collectors.toList());
+                .values());
     }
 }

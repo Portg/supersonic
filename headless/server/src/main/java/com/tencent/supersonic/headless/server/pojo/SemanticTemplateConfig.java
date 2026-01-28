@@ -3,7 +3,9 @@ package com.tencent.supersonic.headless.server.pojo;
 import lombok.Data;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Data
 public class SemanticTemplateConfig {
@@ -142,6 +144,12 @@ public class SemanticTemplateConfig {
         private List<String> examples = new ArrayList<>();
         private List<String> admins = new ArrayList<>();
         private List<String> viewers = new ArrayList<>();
+        /**
+         * Override ChatApp enable/disable per APP_KEY. Key is the ChatApp APP_KEY (e.g.
+         * "PLAIN_TEXT", "S2SQL_SC"), value is whether to enable it. Apps not in the map retain
+         * their defaults.
+         */
+        private Map<String, Boolean> chatAppOverrides = new HashMap<>();
     }
 
     @Data
@@ -155,7 +163,10 @@ public class SemanticTemplateConfig {
     public static class PluginConfig {
         private String type;
         private String name;
+        private String description;
         private String pattern;
+        private List<String> examples;
+        private List<Long> dataSetIds;
         private Object config;
     }
 

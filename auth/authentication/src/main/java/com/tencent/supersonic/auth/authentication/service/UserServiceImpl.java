@@ -10,10 +10,13 @@ import com.tencent.supersonic.auth.api.authentication.utils.UserHolder;
 import com.tencent.supersonic.auth.authentication.persistence.mapper.UserRoleDOMapper;
 import com.tencent.supersonic.auth.authentication.utils.ComponentFactory;
 import com.tencent.supersonic.common.config.SystemConfig;
+import com.tencent.supersonic.common.config.TenantConfig;
 import com.tencent.supersonic.common.pojo.User;
 import com.tencent.supersonic.common.service.SystemConfigService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -25,6 +28,7 @@ import java.util.stream.Collectors;
 @Service
 public class UserServiceImpl implements UserService {
 
+    private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
     private final SystemConfigService sysParameterService;
     private final PermissionService permissionService;
     private final UserRoleDOMapper userRoleDOMapper;
@@ -159,5 +163,36 @@ public class UserServiceImpl implements UserService {
     @Override
     public List<Long> getUserRoleIds(Long userId) {
         return userRoleDOMapper.selectRoleIdsByUserId(userId);
+    }
+
+    @Override
+    public User getDefaultUser() {
+        try {
+            User user = ComponentFactory.getUserAdaptor().getUserByName("admin");
+            if (user != null) {
+                return user;
+            }
+        } catch (Exception e) {
+            // Fallback to hardcoded value when database is not ready (e.g. during startup)
+        }
+        return User.getDefaultUser();
+    }
+
+    @Override
+    public User getVisitUser() {
+        try {
+            User user = ComponentFactory.getUserAdaptor().getUserByName("visit");
+            if (user != null) {
+                return user;
+            }
+        } catch (Exception e) {
+            // Fallback to hardcoded value when database is not ready (e.g. during startup)
+        }
+        return User.getVisitUser();
+    }
+
+    @Override
+    public User getAppUser(int appId) {
+        return User.getAppUser(appId);
     }
 }

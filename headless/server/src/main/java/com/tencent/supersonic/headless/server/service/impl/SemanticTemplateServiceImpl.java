@@ -2,10 +2,12 @@ package com.tencent.supersonic.headless.server.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.tencent.supersonic.common.config.TenantConfig;
 import com.tencent.supersonic.common.context.TenantContext;
 import com.tencent.supersonic.common.pojo.User;
 import com.tencent.supersonic.common.pojo.exception.InvalidArgumentException;
 import com.tencent.supersonic.common.util.JsonUtil;
+import com.tencent.supersonic.headless.server.event.TemplateDeployedEvent;
 import com.tencent.supersonic.headless.server.executor.SemanticDeployExecutor;
 import com.tencent.supersonic.headless.server.persistence.dataobject.SemanticDeploymentDO;
 import com.tencent.supersonic.headless.server.persistence.dataobject.SemanticTemplateDO;
@@ -21,12 +23,12 @@ import com.tencent.supersonic.headless.server.pojo.SemanticTemplateListResp;
 import com.tencent.supersonic.headless.server.service.SemanticTemplateService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.BeanUtils;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -36,45 +38,39 @@ import java.util.stream.Collectors;
 public class SemanticTemplateServiceImpl extends
         ServiceImpl<SemanticTemplateMapper, SemanticTemplateDO> implements SemanticTemplateService {
 
-    private static final Long DEFAULT_TENANT_ID = 1L;
-
-    /**
-     * Template status constants: - DRAFT (0): Newly created, can be edited/deleted - DEPLOYED (1):
-     * Has been deployed, cannot be edited/deleted
-     */
     private static final Integer STATUS_DRAFT = 0;
     private static final Integer STATUS_DEPLOYED = 1;
 
-    @Autowired
-    private SemanticTemplateMapper templateMapper;
+    private final SemanticDeploymentMapper deploymentMapper;
+    private final SemanticDeployExecutor deployExecutor;
+    private final ApplicationEventPublisher applicationEventPublisher;
+    private final TenantConfig tenantConfig;
 
-    @Autowired
-    private SemanticDeploymentMapper deploymentMapper;
-
-    @Lazy
-    @Autowired
-    private SemanticDeployExecutor deployExecutor;
+    public SemanticTemplateServiceImpl(SemanticDeploymentMapper deploymentMapper,
+            @Lazy SemanticDeployExecutor deployExecutor,
+            ApplicationEventPublisher applicationEventPublisher, TenantConfig tenantConfig) {
+        this.deploymentMapper = deploymentMapper;
+        this.deployExecutor = deployExecutor;
+        this.applicationEventPublisher = applicationEventPublisher;
+        this.tenantConfig = tenantConfig;
+    }
 
     @Override
     public SemanticTemplateListResp getTemplateList(User user) {
         Long tenantId = getTenantId(user);
 
-        // Get builtin templates (is_builtin=1)
-        // Do NOT filter by status - status is only for permission checks, not for listing
         QueryWrapper<SemanticTemplateDO> builtinWrapper = new QueryWrapper<>();
         builtinWrapper.lambda().eq(SemanticTemplateDO::getIsBuiltin, 1)
                 .orderByDesc(SemanticTemplateDO::getCreatedAt);
-        List<SemanticTemplateDO> builtinDOs = templateMapper.selectList(builtinWrapper);
+        List<SemanticTemplateDO> builtinDOs = baseMapper.selectList(builtinWrapper);
         List<SemanticTemplate> builtinTemplates =
                 builtinDOs.stream().map(this::convertToTemplate).collect(Collectors.toList());
 
-        // Get tenant's custom templates (is_builtin=0 AND tenant_id matches)
-        // Do NOT filter by status - show all templates (both draft and deployed)
         QueryWrapper<SemanticTemplateDO> customWrapper = new QueryWrapper<>();
         customWrapper.lambda().eq(SemanticTemplateDO::getIsBuiltin, 0)
                 .eq(SemanticTemplateDO::getTenantId, tenantId)
                 .orderByDesc(SemanticTemplateDO::getCreatedAt);
-        List<SemanticTemplateDO> customDOs = templateMapper.selectList(customWrapper);
+        List<SemanticTemplateDO> customDOs = baseMapper.selectList(customWrapper);
         List<SemanticTemplate> customTemplates =
                 customDOs.stream().map(this::convertToTemplate).collect(Collectors.toList());
         return new SemanticTemplateListResp(builtinTemplates, customTemplates);
@@ -82,13 +78,10 @@ public class SemanticTemplateServiceImpl extends
 
     @Override
     public SemanticTemplate getTemplateById(Long id, User user) {
-        SemanticTemplateDO templateDO = templateMapper.selectById(id);
+        SemanticTemplateDO templateDO = baseMapper.selectById(id);
         if (templateDO == null) {
             throw new InvalidArgumentException("Template not found: " + id);
         }
-        // Check access permission:
-        // - Builtin templates (is_builtin=1) are accessible to everyone
-        // - Custom templates are only accessible to their own tenant
         Long tenantId = getTenantId(user);
         boolean isBuiltin = templateDO.getIsBuiltin() != null && templateDO.getIsBuiltin() == 1;
         if (!isBuiltin && !templateDO.getTenantId().equals(tenantId)) {
@@ -105,11 +98,10 @@ public class SemanticTemplateServiceImpl extends
         template.setIsBuiltin(false);
         template.setCreatedBy(user.getName());
         template.setCreatedAt(new Date());
-        // New templates start as draft (status=0), become deployed (status=1) after deployment
         template.setStatus(STATUS_DRAFT);
 
         SemanticTemplateDO templateDO = convertToDO(template);
-        templateMapper.insert(templateDO);
+        baseMapper.insert(templateDO);
         template.setId(templateDO.getId());
         return template;
     }
@@ -117,23 +109,20 @@ public class SemanticTemplateServiceImpl extends
     @Override
     @Transactional
     public SemanticTemplate updateTemplate(SemanticTemplate template, User user) {
-        SemanticTemplateDO existingDO = templateMapper.selectById(template.getId());
+        SemanticTemplateDO existingDO = baseMapper.selectById(template.getId());
         if (existingDO == null) {
             throw new InvalidArgumentException("Template not found: " + template.getId());
         }
 
         Long tenantId = getTenantId(user);
-        // Check permission: only allow updating own templates or builtin templates for SaaS admin
         if (existingDO.getIsBuiltin() == 1) {
             if (!user.isSuperAdmin()) {
                 throw new InvalidArgumentException("Only SaaS admin can update builtin templates");
             }
         } else {
-            // Custom templates: check tenant permission
             if (!existingDO.getTenantId().equals(tenantId)) {
                 throw new InvalidArgumentException("No permission to update this template");
             }
-            // Custom templates can only be edited when in draft status (not yet deployed)
             if (!STATUS_DRAFT.equals(existingDO.getStatus())) {
                 throw new InvalidArgumentException("Cannot edit template that has been deployed");
             }
@@ -145,36 +134,32 @@ public class SemanticTemplateServiceImpl extends
         templateDO.setId(existingDO.getId());
         templateDO.setTenantId(existingDO.getTenantId());
         templateDO.setIsBuiltin(existingDO.getIsBuiltin());
-        templateDO.setStatus(existingDO.getStatus()); // Preserve status
-        templateMapper.updateById(templateDO);
+        templateDO.setStatus(existingDO.getStatus());
+        baseMapper.updateById(templateDO);
         return convertToTemplate(templateDO);
     }
 
     @Override
     @Transactional
     public void deleteTemplate(Long id, User user) {
-        SemanticTemplateDO templateDO = templateMapper.selectById(id);
+        SemanticTemplateDO templateDO = baseMapper.selectById(id);
         if (templateDO == null) {
             return;
         }
 
         Long tenantId = getTenantId(user);
-        // Only allow deleting own templates (not builtin)
         if (templateDO.getIsBuiltin() == 1) {
             throw new InvalidArgumentException("Cannot delete builtin templates");
         }
         if (!templateDO.getTenantId().equals(tenantId)) {
             throw new InvalidArgumentException("No permission to delete this template");
         }
-        // Can only delete templates that haven't been deployed yet
         if (!STATUS_DRAFT.equals(templateDO.getStatus())) {
             throw new InvalidArgumentException("Cannot delete template that has been deployed");
         }
 
-        templateMapper.deleteById(id);
+        baseMapper.deleteById(id);
     }
-
-    // ============ Deployment Functions ============
 
     @Override
     public SemanticPreviewResult previewDeployment(Long templateId, SemanticDeployParam param,
@@ -190,12 +175,10 @@ public class SemanticTemplateServiceImpl extends
         SemanticTemplate template = getTemplateById(templateId, user);
         Long tenantId = getTenantId(user);
 
-        // Check if template has already been successfully deployed by this tenant
         if (hasSuccessfulDeployment(templateId, tenantId)) {
             throw new InvalidArgumentException("该模板已成功部署过，不能重复部署。如需重新部署，请先删除之前部署创建的语义对象。");
         }
 
-        // Create deployment record
         SemanticDeployment deployment = new SemanticDeployment();
         deployment.setTemplateId(templateId);
         deployment.setTemplateName(template.getName());
@@ -210,25 +193,27 @@ public class SemanticTemplateServiceImpl extends
         deploymentMapper.insert(deploymentDO);
         deployment.setId(deploymentDO.getId());
 
-        // Execute deployment
         try {
             deployment.setStatus(SemanticDeployment.DeploymentStatus.RUNNING);
             deployment.setStartTime(new Date());
             updateDeploymentStatus(deployment);
 
             SemanticDeployResult result = deployExecutor.execute(template, param, user);
+
+            // Publish event for chat module to create Agent/Plugin
+            applicationEventPublisher.publishEvent(
+                    new TemplateDeployedEvent(this, result, template.getTemplateConfig(), user));
+
             deployment.setResultDetail(result);
             deployment.setStatus(SemanticDeployment.DeploymentStatus.SUCCESS);
             deployment.setEndTime(new Date());
 
-            // Update template status to DEPLOYED after successful deployment
-            // Only for custom templates (builtin templates are always status=1)
-            SemanticTemplateDO templateDO = templateMapper.selectById(templateId);
+            SemanticTemplateDO templateDO = baseMapper.selectById(templateId);
             if (templateDO != null && templateDO.getIsBuiltin() == 0) {
                 templateDO.setStatus(STATUS_DEPLOYED);
                 templateDO.setUpdatedAt(new Date());
                 templateDO.setUpdatedBy(user.getName());
-                templateMapper.updateById(templateDO);
+                baseMapper.updateById(templateDO);
                 log.info("Template {} status updated to DEPLOYED after successful deployment",
                         templateId);
             }
@@ -247,8 +232,6 @@ public class SemanticTemplateServiceImpl extends
         SemanticDeploymentDO deploymentDO = convertToDeploymentDO(deployment);
         deploymentMapper.updateById(deploymentDO);
     }
-
-    // ============ Deployment History ============
 
     @Override
     public List<SemanticDeployment> getDeploymentHistory(User user) {
@@ -275,28 +258,11 @@ public class SemanticTemplateServiceImpl extends
         return convertToDeployment(deploymentDO);
     }
 
-    // ============ System Management ============
-
-    @Override
-    public void initBuiltinTemplates() {
-        // Check if builtin templates already exist
-        QueryWrapper<SemanticTemplateDO> wrapper = new QueryWrapper<>();
-        wrapper.lambda().eq(SemanticTemplateDO::getIsBuiltin, 1);
-        long count = templateMapper.selectCount(wrapper);
-        if (count > 0) {
-            log.info("Builtin templates already initialized, skipping...");
-            return;
-        }
-
-        log.info("Initializing builtin templates...");
-        // Note: Actual template initialization will be done by BuiltinSemanticTemplateInitializer
-    }
-
     @Override
     public List<SemanticTemplate> getBuiltinTemplates() {
         QueryWrapper<SemanticTemplateDO> wrapper = new QueryWrapper<>();
         wrapper.lambda().eq(SemanticTemplateDO::getIsBuiltin, 1);
-        List<SemanticTemplateDO> templateDOs = templateMapper.selectList(wrapper);
+        List<SemanticTemplateDO> templateDOs = baseMapper.selectList(wrapper);
         return templateDOs.stream().map(this::convertToTemplate).collect(Collectors.toList());
     }
 
@@ -319,31 +285,26 @@ public class SemanticTemplateServiceImpl extends
             throw new InvalidArgumentException("Only SaaS admin can manage builtin templates");
         }
 
-        template.setTenantId(DEFAULT_TENANT_ID);
+        template.setTenantId(tenantConfig.getDefaultTenantId());
         template.setIsBuiltin(true);
-        template.setStatus(STATUS_DEPLOYED); // Builtin templates are always in deployed state
+        template.setStatus(STATUS_DEPLOYED);
 
-        // Check if template with same bizName exists
         QueryWrapper<SemanticTemplateDO> wrapper = new QueryWrapper<>();
-        wrapper.lambda().eq(SemanticTemplateDO::getTenantId, DEFAULT_TENANT_ID)
+        wrapper.lambda().eq(SemanticTemplateDO::getTenantId, tenantConfig.getDefaultTenantId())
                 .eq(SemanticTemplateDO::getBizName, template.getBizName());
-        SemanticTemplateDO existingDO = templateMapper.selectOne(wrapper);
+        SemanticTemplateDO existingDO = baseMapper.selectOne(wrapper);
 
         if (existingDO != null) {
-            // Update existing
             template.setId(existingDO.getId());
             template.setUpdatedBy(user.getName());
             template.setUpdatedAt(new Date());
             SemanticTemplateDO templateDO = convertToDO(template);
-            templateMapper.updateById(templateDO);
+            baseMapper.updateById(templateDO);
         } else {
-            // Create new
             template.setCreatedBy(user.getName());
             template.setCreatedAt(new Date());
-            // Status already set to STATUS_DEPLOYED above
-            template.setStatus(STATUS_DEPLOYED);
             SemanticTemplateDO templateDO = convertToDO(template);
-            templateMapper.insert(templateDO);
+            baseMapper.insert(templateDO);
             template.setId(templateDO.getId());
         }
 
@@ -353,7 +314,6 @@ public class SemanticTemplateServiceImpl extends
     // ============ Helper Methods ============
 
     private Long getTenantId(User user) {
-        // Priority: TenantContext > User.tenantId > default
         Long tenantId = TenantContext.getTenantId();
         if (tenantId != null) {
             return tenantId;
@@ -361,12 +321,9 @@ public class SemanticTemplateServiceImpl extends
         if (user.getTenantId() != null) {
             return user.getTenantId();
         }
-        return DEFAULT_TENANT_ID;
+        return tenantConfig.getDefaultTenantId();
     }
 
-    /**
-     * Check if a template has already been successfully deployed by the given tenant.
-     */
     private boolean hasSuccessfulDeployment(Long templateId, Long tenantId) {
         QueryWrapper<SemanticDeploymentDO> wrapper = new QueryWrapper<>();
         wrapper.lambda().eq(SemanticDeploymentDO::getTemplateId, templateId)
@@ -380,21 +337,8 @@ public class SemanticTemplateServiceImpl extends
             return null;
         }
         SemanticTemplate template = new SemanticTemplate();
-        template.setId(templateDO.getId());
-        template.setName(templateDO.getName());
-        template.setBizName(templateDO.getBizName());
-        template.setDescription(templateDO.getDescription());
-        template.setCategory(templateDO.getCategory());
-        template.setPreviewImage(templateDO.getPreviewImage());
-        template.setStatus(templateDO.getStatus());
+        BeanUtils.copyProperties(templateDO, template, "isBuiltin", "templateConfig");
         template.setIsBuiltin(templateDO.getIsBuiltin() != null && templateDO.getIsBuiltin() == 1);
-        template.setTenantId(templateDO.getTenantId());
-        template.setCreatedAt(templateDO.getCreatedAt());
-        template.setCreatedBy(templateDO.getCreatedBy());
-        template.setUpdatedAt(templateDO.getUpdatedAt());
-        template.setUpdatedBy(templateDO.getUpdatedBy());
-
-        // Parse template config
         if (StringUtils.isNotBlank(templateDO.getTemplateConfig())) {
             template.setTemplateConfig(JsonUtil.toObject(templateDO.getTemplateConfig(),
                     SemanticTemplateConfig.class));
@@ -404,21 +348,8 @@ public class SemanticTemplateServiceImpl extends
 
     private SemanticTemplateDO convertToDO(SemanticTemplate template) {
         SemanticTemplateDO templateDO = new SemanticTemplateDO();
-        templateDO.setId(template.getId());
-        templateDO.setName(template.getName());
-        templateDO.setBizName(template.getBizName());
-        templateDO.setDescription(template.getDescription());
-        templateDO.setCategory(template.getCategory());
-        templateDO.setPreviewImage(template.getPreviewImage());
-        templateDO.setStatus(template.getStatus());
+        BeanUtils.copyProperties(template, templateDO, "isBuiltin", "templateConfig");
         templateDO.setIsBuiltin(template.getIsBuiltin() != null && template.getIsBuiltin() ? 1 : 0);
-        templateDO.setTenantId(template.getTenantId());
-        templateDO.setCreatedAt(template.getCreatedAt());
-        templateDO.setCreatedBy(template.getCreatedBy());
-        templateDO.setUpdatedAt(template.getUpdatedAt());
-        templateDO.setUpdatedBy(template.getUpdatedBy());
-
-        // Serialize template config
         if (template.getTemplateConfig() != null) {
             templateDO.setTemplateConfig(JsonUtil.toString(template.getTemplateConfig()));
         }
@@ -430,24 +361,12 @@ public class SemanticTemplateServiceImpl extends
             return null;
         }
         SemanticDeployment deployment = new SemanticDeployment();
-        deployment.setId(deploymentDO.getId());
-        deployment.setTemplateId(deploymentDO.getTemplateId());
-        deployment.setTemplateName(deploymentDO.getTemplateName());
-        deployment.setDatabaseId(deploymentDO.getDatabaseId());
+        BeanUtils.copyProperties(deploymentDO, deployment, "status", "paramConfig", "resultDetail");
         deployment.setStatus(SemanticDeployment.DeploymentStatus.valueOf(deploymentDO.getStatus()));
-        deployment.setErrorMessage(deploymentDO.getErrorMessage());
-        deployment.setStartTime(deploymentDO.getStartTime());
-        deployment.setEndTime(deploymentDO.getEndTime());
-        deployment.setTenantId(deploymentDO.getTenantId());
-        deployment.setCreatedAt(deploymentDO.getCreatedAt());
-        deployment.setCreatedBy(deploymentDO.getCreatedBy());
-
-        // Parse param config
         if (StringUtils.isNotBlank(deploymentDO.getParamConfig())) {
             deployment.setParamConfig(
                     JsonUtil.toObject(deploymentDO.getParamConfig(), SemanticDeployParam.class));
         }
-        // Parse result detail
         if (StringUtils.isNotBlank(deploymentDO.getResultDetail())) {
             deployment.setResultDetail(
                     JsonUtil.toObject(deploymentDO.getResultDetail(), SemanticDeployResult.class));
@@ -457,23 +376,11 @@ public class SemanticTemplateServiceImpl extends
 
     private SemanticDeploymentDO convertToDeploymentDO(SemanticDeployment deployment) {
         SemanticDeploymentDO deploymentDO = new SemanticDeploymentDO();
-        deploymentDO.setId(deployment.getId());
-        deploymentDO.setTemplateId(deployment.getTemplateId());
-        deploymentDO.setTemplateName(deployment.getTemplateName());
-        deploymentDO.setDatabaseId(deployment.getDatabaseId());
+        BeanUtils.copyProperties(deployment, deploymentDO, "status", "paramConfig", "resultDetail");
         deploymentDO.setStatus(deployment.getStatus().name());
-        deploymentDO.setErrorMessage(deployment.getErrorMessage());
-        deploymentDO.setStartTime(deployment.getStartTime());
-        deploymentDO.setEndTime(deployment.getEndTime());
-        deploymentDO.setTenantId(deployment.getTenantId());
-        deploymentDO.setCreatedAt(deployment.getCreatedAt());
-        deploymentDO.setCreatedBy(deployment.getCreatedBy());
-
-        // Serialize param config
         if (deployment.getParamConfig() != null) {
             deploymentDO.setParamConfig(JsonUtil.toString(deployment.getParamConfig()));
         }
-        // Serialize result detail
         if (deployment.getResultDetail() != null) {
             deploymentDO.setResultDetail(JsonUtil.toString(deployment.getResultDetail()));
         }

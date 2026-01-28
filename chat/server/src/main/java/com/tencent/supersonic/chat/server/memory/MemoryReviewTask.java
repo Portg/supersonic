@@ -1,5 +1,6 @@
 package com.tencent.supersonic.chat.server.memory;
 
+import com.tencent.supersonic.auth.api.authentication.service.UserService;
 import com.tencent.supersonic.chat.api.pojo.enums.MemoryReviewResult;
 import com.tencent.supersonic.chat.api.pojo.enums.MemoryStatus;
 import com.tencent.supersonic.chat.api.pojo.request.ChatMemoryFilter;
@@ -53,6 +54,9 @@ public class MemoryReviewTask {
 
     @Autowired
     private AgentService agentService;
+
+    @Autowired
+    private UserService userService;
 
     public MemoryReviewTask() {
         ChatAppManager.register(APP_KEY,
@@ -128,7 +132,7 @@ public class MemoryReviewTask {
             ChatMemoryUpdateReq memoryUpdateReq = ChatMemoryUpdateReq.builder().id(m.getId())
                     .status(m.getStatus()).llmReviewRet(m.getLlmReviewRet())
                     .llmReviewCmt(m.getLlmReviewCmt()).build();
-            memoryService.updateMemory(memoryUpdateReq, User.getDefaultUser());
+            memoryService.updateMemory(memoryUpdateReq, userService.getDefaultUser());
         }
     }
 }

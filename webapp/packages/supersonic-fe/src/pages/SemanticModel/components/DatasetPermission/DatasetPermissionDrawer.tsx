@@ -205,7 +205,7 @@ const DatasetPermissionDrawer: React.FC<Props> = ({
 
           <ProCard bordered title="行权限">
             <div>
-              <Form form={form} layout="vertical">
+              <Form form={form} layout="vertical" name="datasetPermissionForm">
                 <FormItem name="dimensionFilters" label="表达式">
                   <SqlEditor height={'150px'} />
                 </FormItem>

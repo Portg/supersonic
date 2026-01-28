@@ -1,7 +1,6 @@
 package com.tencent.supersonic.headless;
 
 import com.tencent.supersonic.common.pojo.User;
-import com.tencent.supersonic.demo.S2VisitsDemo;
 import com.tencent.supersonic.headless.api.pojo.response.DataSetResp;
 import com.tencent.supersonic.headless.api.pojo.response.SemanticTranslateResp;
 import com.tencent.supersonic.headless.chat.utils.QueryReqBuilder;
@@ -23,7 +22,7 @@ public class TranslatorTest extends BaseTest {
 
     @BeforeEach
     public void init() {
-        agent = getAgentByName(S2VisitsDemo.AGENT_NAME);
+        agent = getAgentByName("超音数分析助手");
         schema = schemaService.getSemanticSchema(agent.getDataSetIds());
         if (Objects.nonNull(agent)) {
             long dataSetId = agent.getDataSetIds().stream().findFirst().get();

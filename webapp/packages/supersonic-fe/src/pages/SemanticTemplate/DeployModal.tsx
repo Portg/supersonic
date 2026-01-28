@@ -263,7 +263,7 @@ const DeployModal: React.FC<DeployModalProps> = ({
           style={{ marginBottom: 16 }}
         />
 
-        <Form form={form} layout="vertical" initialValues={{ createAgent: true }}>
+        <Form form={form} layout="vertical" name="deployForm" initialValues={{ createAgent: true }}>
           <Form.Item
             name="databaseId"
             label="目标数据库"

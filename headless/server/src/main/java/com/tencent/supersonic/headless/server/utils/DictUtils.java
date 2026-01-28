@@ -1,5 +1,6 @@
 package com.tencent.supersonic.headless.server.utils;
 
+import com.tencent.supersonic.auth.api.authentication.service.UserService;
 import com.tencent.supersonic.common.pojo.*;
 import com.tencent.supersonic.common.pojo.enums.*;
 import com.tencent.supersonic.common.util.BeanMapper;
@@ -58,13 +59,15 @@ public class DictUtils {
     private final MetricService metricService;
     private final SemanticLayerService queryService;
     private final ModelService modelService;
+    private final UserService userService;
 
     public DictUtils(DimensionService dimensionService, MetricService metricService,
-            SemanticLayerService queryService, ModelService modelService) {
+            SemanticLayerService queryService, ModelService modelService, UserService userService) {
         this.dimensionService = dimensionService;
         this.metricService = metricService;
         this.queryService = queryService;
         this.modelService = modelService;
+        this.userService = userService;
     }
 
     public String fetchDictFileName(DictItemResp dictItemResp) {
@@ -141,7 +144,7 @@ public class DictUtils {
         String bizName = dictItemResp.getBizName();
         try {
             SemanticQueryResp semanticQueryResp =
-                    queryService.queryByReq(semanticQueryReq, User.getDefaultUser());
+                    queryService.queryByReq(semanticQueryReq, userService.getDefaultUser());
             if (Objects.isNull(semanticQueryResp)
                     || CollectionUtils.isEmpty(semanticQueryResp.getResultList())) {
                 return lines;

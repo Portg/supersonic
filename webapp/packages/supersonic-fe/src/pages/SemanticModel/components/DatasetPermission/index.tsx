@@ -102,7 +102,7 @@ const DatasetPermissionSection: React.FC<Props> = ({ datasetId }) => {
       <PermissionStatus datasetId={datasetId} />
 
       <Card title="基本权限设置" bordered={false} style={{ marginBottom: 16 }}>
-        <Form form={form} layout="vertical">
+        <Form form={form} layout="vertical" name="datasetPermissionBaseForm">
           <FormItem name="admin" label="管理员">
             <SelectTMEPerson
               placeholder="请选择管理员"

@@ -31,8 +31,7 @@ public class DefaultAuthenticationInterceptor extends AuthenticationInterceptor 
             return true;
         }
 
-        if (handler instanceof HandlerMethod) {
-            HandlerMethod handlerMethod = (HandlerMethod) handler;
+        if (handler instanceof HandlerMethod handlerMethod) {
             Method method = handlerMethod.getMethod();
             AuthenticationIgnore ignore = method.getAnnotation(AuthenticationIgnore.class);
             if (ignore != null) {
@@ -58,7 +57,7 @@ public class DefaultAuthenticationInterceptor extends AuthenticationInterceptor 
 
     public UserWithPassword getUserWithPassword(HttpServletRequest request) {
         final Optional<Claims> claimsOptional = tokenService.getClaims(request);
-        if (!claimsOptional.isPresent()) {
+        if (claimsOptional.isEmpty()) {
             return null;
         }
         Claims claims = claimsOptional.get();

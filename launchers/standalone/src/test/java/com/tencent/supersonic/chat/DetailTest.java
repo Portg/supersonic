@@ -5,7 +5,6 @@ import com.tencent.supersonic.chat.api.pojo.response.QueryResult;
 import com.tencent.supersonic.common.pojo.enums.AggregateTypeEnum;
 import com.tencent.supersonic.common.pojo.enums.FilterOperatorEnum;
 import com.tencent.supersonic.common.pojo.enums.QueryType;
-import com.tencent.supersonic.demo.S2SingerDemo;
 import com.tencent.supersonic.headless.api.pojo.SchemaElement;
 import com.tencent.supersonic.headless.api.pojo.SemanticParseInfo;
 import com.tencent.supersonic.headless.api.pojo.request.QueryFilter;
@@ -23,7 +22,7 @@ public class DetailTest extends BaseTest {
 
     @BeforeEach
     public void init() {
-        agent = getAgentByName(S2SingerDemo.AGENT_NAME);
+        agent = getAgentByName("艺人分析助手");
         schema = schemaService.getSemanticSchema(agent.getDataSetIds());
     }
 

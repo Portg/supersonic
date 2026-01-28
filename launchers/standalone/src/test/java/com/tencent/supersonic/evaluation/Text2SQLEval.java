@@ -14,8 +14,6 @@ import com.tencent.supersonic.common.pojo.ChatApp;
 import com.tencent.supersonic.common.pojo.User;
 import com.tencent.supersonic.common.pojo.enums.AppModule;
 import com.tencent.supersonic.common.util.ChatAppManager;
-import com.tencent.supersonic.demo.S2CompanyDemo;
-import com.tencent.supersonic.demo.S2VisitsDemo;
 import com.tencent.supersonic.headless.chat.corrector.LLMSqlCorrector;
 import com.tencent.supersonic.util.DataUtils;
 import com.tencent.supersonic.util.LLMConfigUtils;
@@ -42,11 +40,11 @@ public class Text2SQLEval extends BaseTest {
 
     @BeforeAll
     public void init() {
-        Agent productAgent = getAgentByName(S2VisitsDemo.AGENT_NAME);
+        Agent productAgent = getAgentByName("超音数分析助手");
         if (Objects.nonNull(productAgent)) {
             dataSetIds.addAll(productAgent.getDataSetIds());
         }
-        Agent companyAgent = getAgentByName(S2CompanyDemo.AGENT_NAME);
+        Agent companyAgent = getAgentByName("企业分析助手");
         if (Objects.nonNull(companyAgent)) {
             dataSetIds.addAll(companyAgent.getDataSetIds());
         }

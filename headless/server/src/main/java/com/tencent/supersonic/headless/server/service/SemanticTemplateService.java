@@ -58,11 +58,6 @@ public interface SemanticTemplateService {
     SemanticDeployment getDeploymentById(Long id, User user);
 
     /**
-     * Initialize builtin templates (called at system startup).
-     */
-    void initBuiltinTemplates();
-
-    /**
      * Get all builtin templates.
      */
     List<SemanticTemplate> getBuiltinTemplates();

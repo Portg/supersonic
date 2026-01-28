@@ -208,7 +208,7 @@ const TenantPermissionManagement: React.FC = () => {
         okText="确定"
         cancelText="取消"
       >
-        <Form form={form} layout="vertical">
+        <Form form={form} layout="vertical" name="tenantPermissionForm">
           <Form.Item
             name="code"
             label="权限编码"

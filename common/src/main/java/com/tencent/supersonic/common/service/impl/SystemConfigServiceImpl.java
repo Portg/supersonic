@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.tencent.supersonic.common.config.SystemConfig;
+import com.tencent.supersonic.common.config.TenantConfig;
 import com.tencent.supersonic.common.context.TenantContext;
 import com.tencent.supersonic.common.persistence.dataobject.SystemConfigDO;
 import com.tencent.supersonic.common.persistence.mapper.SystemConfigMapper;
@@ -23,7 +24,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SystemConfigServiceImpl extends ServiceImpl<SystemConfigMapper, SystemConfigDO>
         implements SystemConfigService {
 
-    private static final Long DEFAULT_TENANT_ID = 1L;
+    @Autowired
+    private TenantConfig tenantConfig;
 
     @Autowired
     private Environment environment;
@@ -33,7 +35,7 @@ public class SystemConfigServiceImpl extends ServiceImpl<SystemConfigMapper, Sys
 
     @Override
     public SystemConfig getSystemConfig() {
-        Long tenantId = TenantContext.getTenantIdOrDefault(DEFAULT_TENANT_ID);
+        Long tenantId = TenantContext.getTenantIdOrDefault(tenantConfig.getDefaultTenantId());
         SystemConfig cachedConfig = tenantConfigCache.get(tenantId);
         if (cachedConfig != null) {
             return cachedConfig;
@@ -67,7 +69,7 @@ public class SystemConfigServiceImpl extends ServiceImpl<SystemConfigMapper, Sys
     public void save(SystemConfig sysConfig) {
         Long tenantId = sysConfig.getTenantId();
         if (tenantId == null) {
-            tenantId = TenantContext.getTenantIdOrDefault(DEFAULT_TENANT_ID);
+            tenantId = TenantContext.getTenantIdOrDefault(tenantConfig.getDefaultTenantId());
             sysConfig.setTenantId(tenantId);
         }
         SystemConfigDO systemConfigDO = convert(sysConfig);

@@ -1,6 +1,7 @@
 package com.tencent.supersonic.auth.authentication.strategy;
 
 import com.tencent.supersonic.auth.api.authentication.constant.UserConstants;
+import com.tencent.supersonic.auth.api.authentication.service.UserService;
 import com.tencent.supersonic.auth.api.authentication.service.UserStrategy;
 import com.tencent.supersonic.auth.authentication.utils.TokenService;
 import com.tencent.supersonic.common.pojo.User;
@@ -16,9 +17,11 @@ public class HttpHeaderUserStrategy implements UserStrategy {
 
     public static final String STRATEGY_NAME = "http";
     private final TokenService tokenService;
+    private final UserService userService;
 
-    public HttpHeaderUserStrategy(TokenService tokenService) {
+    public HttpHeaderUserStrategy(TokenService tokenService, UserService userService) {
         this.tokenService = tokenService;
+        this.userService = userService;
     }
 
     @Override
@@ -43,12 +46,12 @@ public class HttpHeaderUserStrategy implements UserStrategy {
 
     public User getUser(HttpServletRequest request) {
         final Optional<Claims> claimsOptional = tokenService.getClaims(request);
-        return claimsOptional.map(this::getUser).orElse(User.getVisitUser());
+        return claimsOptional.map(this::getUser).orElse(userService.getVisitUser());
     }
 
     public User getUser(String token, String appKey) {
         final Optional<Claims> claimsOptional = tokenService.getClaims(token, appKey);
-        return claimsOptional.map(this::getUser).orElse(User.getVisitUser());
+        return claimsOptional.map(this::getUser).orElse(userService.getVisitUser());
     }
 
     private User getUser(Claims claims) {

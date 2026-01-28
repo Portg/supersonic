@@ -119,6 +119,15 @@ public class DefaultUserAdaptor implements UserAdaptor {
                 orgDO.getIsRoot() != null && orgDO.getIsRoot() == 1);
     }
 
+    @Override
+    public User getUserByName(String name) {
+        UserDO userDO = getUser(name);
+        if (userDO == null) {
+            return null;
+        }
+        return convert(userDO);
+    }
+
     private User convert(UserDO userDO) {
         User user = new User();
         BeanUtils.copyProperties(userDO, user);

@@ -50,7 +50,7 @@ const CreateRelationModal = (props: Props) => {
       centered
       destroyOnClose={true}
     >
-      <Form form={form}>
+      <Form form={form} name="createRelationForm">
         <Form.Item
           {...formItemLayout}
           name="SOURCE_GUID"

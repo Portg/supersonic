@@ -56,4 +56,19 @@ public interface UserService {
      * Get role IDs for a user
      */
     List<Long> getUserRoleIds(Long userId);
+
+    /**
+     * Get the system admin user (queried from database).
+     */
+    User getDefaultUser();
+
+    /**
+     * Get the anonymous visitor user (fallback when authentication fails).
+     */
+    User getVisitUser();
+
+    /**
+     * Get the application user (for mobile/app scenarios).
+     */
+    User getAppUser(int appId);
 }

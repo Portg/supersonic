@@ -1,5 +1,7 @@
 package com.tencent.supersonic.common.pojo;
 
+import com.tencent.supersonic.common.config.TenantConfig;
+import com.tencent.supersonic.common.util.ContextUtils;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -55,10 +57,21 @@ public class User implements Serializable {
     /** Role names */
     private List<String> roleNames;
 
+    /**
+     * Get default tenant ID from TenantConfig. Falls back to 1L if Spring context is not ready.
+     */
+    private static Long getDefaultTenantId() {
+        try {
+            return ContextUtils.getBean(TenantConfig.class).getDefaultTenantId();
+        } catch (Exception e) {
+            return 1L;
+        }
+    }
+
     public static User get(Long id, String name, String displayName, String email,
             Integer isAdmin) {
         return User.builder().id(id).name(name).displayName(displayName).email(email)
-                .isAdmin(isAdmin).tenantId(1L).role("USER").build();
+                .isAdmin(isAdmin).tenantId(getDefaultTenantId()).role("USER").build();
     }
 
     public static User get(Long id, String name, String displayName, String email, Integer isAdmin,
@@ -72,20 +85,26 @@ public class User implements Serializable {
                 .tenantId(0L).role("VISITOR").build();
     }
 
+    /** @deprecated Use {@code UserService.getDefaultUser()} instead. */
+    @Deprecated
     public static User getDefaultUser() {
         return User.builder().id(1L).name("admin").displayName("admin").email("admin@email")
-                .isAdmin(1).tenantId(1L).role("ADMIN").build();
+                .isAdmin(1).tenantId(getDefaultTenantId()).role("ADMIN").build();
     }
 
+    /** @deprecated Use {@code UserService.getVisitUser()} instead. */
+    @Deprecated
     public static User getVisitUser() {
-        return User.builder().id(1L).name("visit").displayName("visit").email("visit@email")
+        return User.builder().id(null).name("visit").displayName("visit").email("visit@email")
                 .isAdmin(0).tenantId(0L).role("VISITOR").build();
     }
 
+    /** @deprecated Use {@code UserService.getAppUser(int)} instead. */
+    @Deprecated
     public static User getAppUser(int appId) {
         String name = String.format("app_%s", appId);
-        return User.builder().id(1L).name(name).displayName(name).email("").isAdmin(1).tenantId(1L)
-                .role("APP").build();
+        return User.builder().id(1L).name(name).displayName(name).email("").isAdmin(1)
+                .tenantId(getDefaultTenantId()).role("APP").build();
     }
 
     public String getDisplayName() {

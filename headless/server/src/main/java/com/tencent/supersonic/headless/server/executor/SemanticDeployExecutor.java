@@ -155,61 +155,64 @@ public class SemanticDeployExecutor {
         }
 
         try {
-            // 1. Create Domain
-            DomainResp domain = createDomain(config.getDomain(), param, user);
-            result.setDomainId(domain.getId());
-            result.setDomainName(domain.getName());
+            // 1. Create semantic objects (Domain, Models, DataSet, Terms) if domain is configured
+            // Agent-only templates (domain == null) skip this entire block
+            if (config.getDomain() != null) {
+                DomainResp domain = createDomain(config.getDomain(), param, user);
+                result.setDomainId(domain.getId());
+                result.setDomainName(domain.getName());
 
-            // 2. Create Models
-            Map<String, ModelResp> modelMap = new HashMap<>();
-            if (!CollectionUtils.isEmpty(config.getModels())) {
-                for (ModelConfig modelConfig : config.getModels()) {
-                    ModelResp model =
-                            createModel(modelConfig, domain, param.getDatabaseId(), param, user);
-                    modelMap.put(modelConfig.getBizName(), model);
+                // 2. Create Models
+                Map<String, ModelResp> modelMap = new HashMap<>();
+                if (!CollectionUtils.isEmpty(config.getModels())) {
+                    for (ModelConfig modelConfig : config.getModels()) {
+                        ModelResp model = createModel(modelConfig, domain, param.getDatabaseId(),
+                                param, user);
+                        modelMap.put(modelConfig.getBizName(), model);
 
-                    SemanticDeployResult.CreatedModel createdModel =
-                            new SemanticDeployResult.CreatedModel();
-                    createdModel.setId(model.getId());
-                    createdModel.setName(model.getName());
-                    createdModel.setBizName(model.getBizName());
-                    result.getModels().add(createdModel);
+                        SemanticDeployResult.CreatedModel createdModel =
+                                new SemanticDeployResult.CreatedModel();
+                        createdModel.setId(model.getId());
+                        createdModel.setName(model.getName());
+                        createdModel.setBizName(model.getBizName());
+                        result.getModels().add(createdModel);
+                    }
                 }
-            }
 
-            // 3. Create Model Relations
-            if (!CollectionUtils.isEmpty(config.getModelRelations())) {
-                for (ModelRelationConfig relaConfig : config.getModelRelations()) {
-                    ModelResp fromModel = modelMap.get(relaConfig.getFromModelBizName());
-                    ModelResp toModel = modelMap.get(relaConfig.getToModelBizName());
-                    if (fromModel != null && toModel != null) {
-                        createModelRelation(relaConfig, domain, fromModel, toModel, user);
+                // 3. Create Model Relations
+                if (!CollectionUtils.isEmpty(config.getModelRelations())) {
+                    for (ModelRelationConfig relaConfig : config.getModelRelations()) {
+                        ModelResp fromModel = modelMap.get(relaConfig.getFromModelBizName());
+                        ModelResp toModel = modelMap.get(relaConfig.getToModelBizName());
+                        if (fromModel != null && toModel != null) {
+                            createModelRelation(relaConfig, domain, fromModel, toModel, user);
+                        }
+                    }
+                }
+
+                // 4. Collect metrics and dimensions for the result
+                collectMetricsAndDimensions(domain.getId(), result);
+
+                // 5. Create DataSet
+                DataSetResp dataSet = createDataSet(config.getDataSet(), domain, param, user);
+                result.setDataSetId(dataSet.getId());
+                result.setDataSetName(dataSet.getName());
+
+                // 6. Create Terms
+                if (!CollectionUtils.isEmpty(config.getTerms())) {
+                    for (TermConfig termConfig : config.getTerms()) {
+                        createTerm(termConfig, domain, user);
+
+                        SemanticDeployResult.CreatedTerm createdTerm =
+                                new SemanticDeployResult.CreatedTerm();
+                        createdTerm.setName(termConfig.getName());
+                        result.getTerms().add(createdTerm);
                     }
                 }
             }
 
-            // 4. Collect metrics and dimensions for the result
-            collectMetricsAndDimensions(domain.getId(), result);
-
-            // 5. Create DataSet
-            DataSetResp dataSet = createDataSet(config.getDataSet(), domain, param, user);
-            result.setDataSetId(dataSet.getId());
-            result.setDataSetName(dataSet.getName());
-
-            // 6. Create Terms
-            if (!CollectionUtils.isEmpty(config.getTerms())) {
-                for (TermConfig termConfig : config.getTerms()) {
-                    createTerm(termConfig, domain, user);
-
-                    SemanticDeployResult.CreatedTerm createdTerm =
-                            new SemanticDeployResult.CreatedTerm();
-                    createdTerm.setName(termConfig.getName());
-                    result.getTerms().add(createdTerm);
-                }
-            }
-
             // 7. Store AgentConfig for later creation through chat module
-            // Agent is not created here to keep headless module independent from chat module
+            // Works for both full templates and agent-only templates
             if (config.getAgent() != null) {
                 SemanticDeployResult.AgentConfigResult agentConfigResult =
                         new SemanticDeployResult.AgentConfigResult();
@@ -217,13 +220,15 @@ public class SemanticDeployExecutor {
                 agentConfigResult.setDescription(config.getAgent().getDescription());
                 agentConfigResult.setEnableSearch(config.getAgent().getEnableSearch());
                 agentConfigResult.setExamples(config.getAgent().getExamples());
-                agentConfigResult.setDataSetId(dataSet.getId());
-                agentConfigResult.setDataSetName(dataSet.getName());
+                agentConfigResult.setChatAppOverrides(config.getAgent().getChatAppOverrides());
+                if (result.getDataSetId() != null) {
+                    agentConfigResult.setDataSetId(result.getDataSetId());
+                    agentConfigResult.setDataSetName(result.getDataSetName());
+                }
                 result.setAgentConfig(agentConfigResult);
             }
 
-            log.info("Successfully deployed template: {} to domain: {}", template.getName(),
-                    domain.getName());
+            log.info("Successfully deployed template: {}", template.getName());
 
         } catch (Exception e) {
             log.error("Failed to deploy template: {}", template.getName(), e);

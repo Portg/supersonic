@@ -8,6 +8,7 @@ import com.github.pagehelper.PageInfo;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.tencent.supersonic.auth.api.authentication.service.UserService;
 import com.tencent.supersonic.common.pojo.Aggregator;
 import com.tencent.supersonic.common.pojo.DataEvent;
 import com.tencent.supersonic.common.pojo.DataItem;
@@ -106,10 +107,13 @@ public class MetricServiceImpl extends ServiceImpl<MetricDOMapper, MetricDO>
 
     private final ChatLayerService chatLayerService;
 
+    private final UserService userService;
+
     public MetricServiceImpl(MetricRepository metricRepository, ModelService modelService,
             AliasGenerateHelper aliasGenerateHelper, CollectService collectService,
             DataSetService dataSetService, ApplicationEventPublisher eventPublisher,
-            DimensionService dimensionService, @Lazy ChatLayerService chatLayerService) {
+            DimensionService dimensionService, @Lazy ChatLayerService chatLayerService,
+            UserService userService) {
         this.metricRepository = metricRepository;
         this.modelService = modelService;
         this.aliasGenerateHelper = aliasGenerateHelper;
@@ -118,6 +122,7 @@ public class MetricServiceImpl extends ServiceImpl<MetricDOMapper, MetricDO>
         this.dataSetService = dataSetService;
         this.dimensionService = dimensionService;
         this.chatLayerService = chatLayerService;
+        this.userService = userService;
     }
 
     @Override
@@ -698,7 +703,7 @@ public class MetricServiceImpl extends ServiceImpl<MetricDOMapper, MetricDO>
     public DataEvent getDataEvent() {
         MetricsFilter metricsFilter = new MetricsFilter();
         List<MetricDO> metricDOS = metricRepository.getMetrics(metricsFilter);
-        return getDataEvent(metricDOS, EventType.ADD, User.getDefaultUser());
+        return getDataEvent(metricDOS, EventType.ADD, userService.getDefaultUser());
     }
 
     private DataEvent getDataEvent(List<MetricDO> metricDOS, EventType eventType, User user) {

@@ -4,6 +4,7 @@ import com.tencent.supersonic.auth.api.authentication.pojo.Tenant;
 import com.tencent.supersonic.auth.api.authentication.pojo.TenantUsage;
 import com.tencent.supersonic.auth.api.authentication.service.TenantService;
 import com.tencent.supersonic.auth.api.authentication.service.UsageTrackingService;
+import com.tencent.supersonic.common.config.TenantConfig;
 import com.tencent.supersonic.common.context.TenantContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -20,15 +21,15 @@ import java.util.Optional;
 @Slf4j
 public class TenantController {
 
-    private static final Long DEFAULT_TENANT_ID = 1L;
-
     private final TenantService tenantService;
     private final UsageTrackingService usageTrackingService;
+    private final TenantConfig tenantConfig;
 
-    public TenantController(TenantService tenantService,
-            UsageTrackingService usageTrackingService) {
+    public TenantController(TenantService tenantService, UsageTrackingService usageTrackingService,
+            TenantConfig tenantConfig) {
         this.tenantService = tenantService;
         this.usageTrackingService = usageTrackingService;
+        this.tenantConfig = tenantConfig;
     }
 
     /**
@@ -38,8 +39,8 @@ public class TenantController {
         Long tenantId = TenantContext.getTenantId();
         if (tenantId == null) {
             log.warn("TenantContext.getTenantId() returned null, using default tenant: {}",
-                    DEFAULT_TENANT_ID);
-            return DEFAULT_TENANT_ID;
+                    tenantConfig.getDefaultTenantId());
+            return tenantConfig.getDefaultTenantId();
         }
         return tenantId;
     }

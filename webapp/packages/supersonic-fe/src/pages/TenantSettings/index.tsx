@@ -224,7 +224,7 @@ const TenantSettings: React.FC = () => {
           <Row gutter={24}>
             <Col span={16}>
               <ProCard title="租户信息" className={styles.card}>
-                <Form form={form} layout="vertical">
+                <Form form={form} layout="vertical" name="tenantSettingsForm">
                   <Row gutter={16}>
                     <Col span={12}>
                       <Form.Item

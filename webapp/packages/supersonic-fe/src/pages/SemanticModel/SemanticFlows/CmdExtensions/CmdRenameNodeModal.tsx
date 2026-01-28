@@ -196,7 +196,7 @@ function showModal(node: NsGraph.INodeConfig, getAppContext: IGetAppCtx) {
     return (
       <div>
         <ConfigProvider>
-          <Form form={form} {...layout} initialValues={{ newNodeName: node.label }}>
+          <Form form={form} {...layout} name="renameNodeForm" initialValues={{ newNodeName: node.label }}>
             <Form.Item
               name="newNodeName"
               label="节点名"

@@ -191,9 +191,15 @@ const DeployHistory: React.FC<DeployHistoryProps> = ({ visible, onClose }) => {
                         <strong>描述:</strong>{' '}
                         {selectedDeployment.resultDetail.agentConfig.description || '-'}
                       </div>
-                      <Tag color="orange">
-                        Agent未自动创建，请通过问答模块手动创建
-                      </Tag>
+                      {selectedDeployment.resultDetail.agentConfig.agentId ? (
+                        <Tag color="green">
+                          Agent已创建 (ID: {selectedDeployment.resultDetail.agentConfig.agentId})
+                        </Tag>
+                      ) : (
+                        <Tag color="orange">
+                          Agent未自动创建，请通过问答模块手动创建
+                        </Tag>
+                      )}
                     </Space>
                   </Descriptions.Item>
                 )}

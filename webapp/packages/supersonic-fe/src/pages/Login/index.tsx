@@ -155,7 +155,7 @@ const LoginPage: React.FC = () => {
       <div className={styles.content}>
         <div className={styles.formContent}>
           <div className={styles.formBox}>
-            <Form form={form} labelCol={{ span: 6 }} colon={false}>
+            <Form form={form} labelCol={{ span: 6 }} colon={false} name="loginForm">
               <div className={styles.loginMain}>
                 <h3 className={styles.title}>
                   <Space>

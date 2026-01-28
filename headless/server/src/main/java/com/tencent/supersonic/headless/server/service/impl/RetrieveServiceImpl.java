@@ -1,5 +1,6 @@
 package com.tencent.supersonic.headless.server.service.impl;
 
+import com.tencent.supersonic.auth.api.authentication.service.UserService;
 import com.tencent.supersonic.common.pojo.User;
 import com.tencent.supersonic.common.pojo.enums.DictWordType;
 import com.tencent.supersonic.headless.api.pojo.SchemaElement;
@@ -50,6 +51,9 @@ public class RetrieveServiceImpl implements RetrieveService {
     private DataSetService dataSetService;
 
     @Autowired
+    private UserService userService;
+
+    @Autowired
     private SchemaService schemaService;
 
     @Autowired
@@ -71,7 +75,7 @@ public class RetrieveServiceImpl implements RetrieveService {
                 schemaService.getSemanticSchema(queryNLReq.getDataSetIds());
         Map<Long, String> dataSetIdToName = semanticSchemaDb.getDataSetIdToName();
         Map<Long, List<Long>> modelIdToDataSetIds = dataSetService.getModelIdToDataSetIds(
-                new ArrayList<>(dataSetIdToName.keySet()), User.getDefaultUser());
+                new ArrayList<>(dataSetIdToName.keySet()), userService.getDefaultUser());
 
         // 2. Detect by segment
         List<S2Term> originals = knowledgeBaseService.getTerms(queryText, modelIdToDataSetIds);

@@ -2,6 +2,7 @@ package com.tencent.supersonic.chat.server.service.impl;
 
 import com.alibaba.fastjson2.JSON;
 import com.google.common.collect.Lists;
+import com.tencent.supersonic.auth.api.authentication.service.UserService;
 import com.tencent.supersonic.chat.api.pojo.request.ChatExecuteReq;
 import com.tencent.supersonic.chat.api.pojo.request.ChatParseReq;
 import com.tencent.supersonic.chat.api.pojo.request.ChatQueryDataReq;
@@ -87,6 +88,8 @@ public class ChatQueryServiceImpl implements ChatQueryService {
     @Autowired
     @Lazy
     private AgentService agentService;
+    @Autowired
+    private UserService userService;
 
     private final List<ChatQueryParser> chatQueryParsers = ComponentFactory.getChatParsers();
     private final List<ChatQueryExecutor> chatQueryExecutors = ComponentFactory.getChatExecutors();
@@ -192,7 +195,7 @@ public class ChatQueryServiceImpl implements ChatQueryService {
         executeReq.setParseId(parseResp.getSelectedParses().getFirst().getId());
         executeReq.setQueryText(chatParseReq.getQueryText());
         executeReq.setChatId(chatParseReq.getChatId());
-        executeReq.setUser(User.getDefaultUser());
+        executeReq.setUser(userService.getDefaultUser());
         executeReq.setAgentId(chatParseReq.getAgentId());
         executeReq.setSaveAnswer(true);
         return execute(executeReq);

@@ -2,6 +2,7 @@ package com.tencent.supersonic.auth.authentication.strategy;
 
 import com.tencent.supersonic.auth.api.authentication.config.OAuthConfig;
 import com.tencent.supersonic.auth.api.authentication.constant.UserConstants;
+import com.tencent.supersonic.auth.api.authentication.service.UserService;
 import com.tencent.supersonic.auth.api.authentication.service.UserStrategy;
 import com.tencent.supersonic.auth.authentication.persistence.dataobject.UserSessionDO;
 import com.tencent.supersonic.auth.authentication.session.SessionService;
@@ -29,12 +30,14 @@ public class OAuthUserStrategy implements UserStrategy {
     private final TokenService tokenService;
     private final SessionService sessionService;
     private final OAuthConfig oauthConfig;
+    private final UserService userService;
 
     public OAuthUserStrategy(TokenService tokenService, SessionService sessionService,
-            OAuthConfig oauthConfig) {
+            OAuthConfig oauthConfig, UserService userService) {
         this.tokenService = tokenService;
         this.sessionService = sessionService;
         this.oauthConfig = oauthConfig;
+        this.userService = userService;
     }
 
     @Override
@@ -71,13 +74,13 @@ public class OAuthUserStrategy implements UserStrategy {
         }
 
         // Return visit user if no valid authentication
-        return User.getVisitUser();
+        return userService.getVisitUser();
     }
 
     @Override
     public User findUser(String token, String appKey) {
         final Optional<Claims> claimsOptional = tokenService.getClaims(token, appKey);
-        return claimsOptional.map(this::getUserFromClaims).orElse(User.getVisitUser());
+        return claimsOptional.map(this::getUserFromClaims).orElse(userService.getVisitUser());
     }
 
     /**

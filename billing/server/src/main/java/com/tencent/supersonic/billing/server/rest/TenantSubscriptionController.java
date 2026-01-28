@@ -3,6 +3,7 @@ package com.tencent.supersonic.billing.server.rest;
 import com.tencent.supersonic.billing.api.pojo.TenantSubscription;
 import com.tencent.supersonic.billing.api.request.SubscriptionRequest;
 import com.tencent.supersonic.billing.api.service.SubscriptionService;
+import com.tencent.supersonic.common.config.TenantConfig;
 import com.tencent.supersonic.common.context.TenantContext;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
@@ -47,12 +48,13 @@ import java.util.List;
 @Slf4j
 public class TenantSubscriptionController {
 
-    private static final Long DEFAULT_TENANT_ID = 1L;
-
     private final SubscriptionService subscriptionService;
+    private final TenantConfig tenantConfig;
 
-    public TenantSubscriptionController(SubscriptionService subscriptionService) {
+    public TenantSubscriptionController(SubscriptionService subscriptionService,
+            TenantConfig tenantConfig) {
         this.subscriptionService = subscriptionService;
+        this.tenantConfig = tenantConfig;
     }
 
     /**
@@ -137,8 +139,8 @@ public class TenantSubscriptionController {
         Long tenantId = TenantContext.getTenantId();
         if (tenantId == null) {
             log.warn("TenantContext.getTenantId() returned null, using default tenant: {}",
-                    DEFAULT_TENANT_ID);
-            return DEFAULT_TENANT_ID;
+                    tenantConfig.getDefaultTenantId());
+            return tenantConfig.getDefaultTenantId();
         }
         return tenantId;
     }

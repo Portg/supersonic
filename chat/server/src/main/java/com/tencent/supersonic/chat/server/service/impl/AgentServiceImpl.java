@@ -137,7 +137,7 @@ public class AgentServiceImpl extends ServiceImpl<AgentDOMapper, AgentDO> implem
             try {
                 chatQueryService
                         .parseAndExecute(ChatParseReq.builder().chatId(-1).agentId(agent.getId())
-                                .queryText(example).user(User.getDefaultUser()).build());
+                                .queryText(example).user(userService.getDefaultUser()).build());
             } catch (Exception e) {
                 log.warn("agent:{} example execute failed:{}", agent.getName(), example);
             }

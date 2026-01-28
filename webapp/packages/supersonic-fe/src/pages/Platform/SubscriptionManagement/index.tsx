@@ -224,7 +224,7 @@ const SubscriptionManagement: React.FC = () => {
         cancelText="取消"
         width={600}
       >
-        <Form form={form} layout="vertical">
+        <Form form={form} layout="vertical" name="subscriptionPlanForm">
           <Form.Item
             name="code"
             label="计划标识"

@@ -58,9 +58,6 @@ knife4j:
 
 # SuperSonic configuration
 s2:
-  # Demo configuration
-  demo:
-    names: S2VisitsDemo,S2SingerDemo
   # Permission configuration
   permission:
     sensitive:
@@ -71,6 +68,7 @@ s2:
       log-mid-level-access: true
   # Multi-tenant configuration
   tenant:
+    enabled: true
     required: false
     default-tenant-id: 1
     header-enabled: true

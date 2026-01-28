@@ -14,6 +14,12 @@ import java.util.List;
 public class TenantConfig {
 
     /**
+     * Whether multi-tenant SQL interceptor is enabled. When false, no tenant filtering is applied
+     * to SQL statements.
+     */
+    private boolean enabled = false;
+
+    /**
      * Whether tenant context is required for requests. If true, requests without tenant context
      * will be rejected.
      */

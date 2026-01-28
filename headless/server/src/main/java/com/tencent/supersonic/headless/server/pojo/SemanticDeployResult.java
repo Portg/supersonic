@@ -4,6 +4,7 @@ import lombok.Data;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Data
 public class SemanticDeployResult {
@@ -42,6 +43,10 @@ public class SemanticDeployResult {
         private List<String> examples;
         private Long dataSetId;
         private String dataSetName;
+        /** Agent ID if auto-created, null if creation failed or skipped */
+        private Integer agentId;
+        /** ChatApp enable/disable overrides keyed by APP_KEY */
+        private Map<String, Boolean> chatAppOverrides;
     }
 
     @Data

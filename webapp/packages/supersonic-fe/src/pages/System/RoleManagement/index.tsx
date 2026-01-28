@@ -266,7 +266,7 @@ const RoleManagement: React.FC = () => {
         onCancel={() => setModalVisible(false)}
         destroyOnClose
       >
-        <Form form={form} layout="vertical">
+        <Form form={form} layout="vertical" name="sysRoleForm">
           <Form.Item
             name="name"
             label="角色名称"

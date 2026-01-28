@@ -1,5 +1,6 @@
 package com.tencent.supersonic.auth.authentication.strategy;
 
+import com.tencent.supersonic.auth.api.authentication.service.UserService;
 import com.tencent.supersonic.auth.api.authentication.service.UserStrategy;
 import com.tencent.supersonic.common.pojo.User;
 import jakarta.servlet.http.HttpServletRequest;
@@ -10,6 +11,12 @@ import org.springframework.stereotype.Service;
 public class FakeUserStrategy implements UserStrategy {
 
     public static final String STRATEGY_NAME = "fake";
+
+    private final UserService userService;
+
+    public FakeUserStrategy(UserService userService) {
+        this.userService = userService;
+    }
 
     @Override
     public String getStrategyName() {
@@ -23,11 +30,11 @@ public class FakeUserStrategy implements UserStrategy {
 
     @Override
     public User findUser(HttpServletRequest request, HttpServletResponse response) {
-        return User.getDefaultUser();
+        return userService.getDefaultUser();
     }
 
     @Override
     public User findUser(String token, String appKey) {
-        return User.getDefaultUser();
+        return userService.getDefaultUser();
     }
 }

@@ -2,6 +2,7 @@ package com.tencent.supersonic.chat.server.service.impl;
 
 import com.alibaba.fastjson.JSONObject;
 import com.github.pagehelper.PageInfo;
+import com.tencent.supersonic.auth.api.authentication.service.UserService;
 import com.tencent.supersonic.chat.api.pojo.enums.MemoryReviewResult;
 import com.tencent.supersonic.chat.api.pojo.enums.MemoryStatus;
 import com.tencent.supersonic.chat.api.pojo.request.*;
@@ -18,6 +19,7 @@ import com.tencent.supersonic.chat.server.persistence.repository.ChatRepository;
 import com.tencent.supersonic.chat.server.pojo.ChatMemory;
 import com.tencent.supersonic.chat.server.service.ChatManageService;
 import com.tencent.supersonic.chat.server.service.MemoryService;
+import com.tencent.supersonic.common.config.TenantConfig;
 import com.tencent.supersonic.common.context.TenantContext;
 import com.tencent.supersonic.common.pojo.User;
 import com.tencent.supersonic.common.util.JsonUtil;
@@ -42,8 +44,10 @@ public class ChatManageServiceImpl implements ChatManageService {
     private ChatQueryRepository chatQueryRepository;
     @Autowired
     private MemoryService memoryService;
-
-    private static final Long DEFAULT_TENANT_ID = 1L;
+    @Autowired
+    private UserService userService;
+    @Autowired
+    private TenantConfig tenantConfig;
 
     @Override
     public Long addChat(User user, String chatName, Integer agentId) {
@@ -54,7 +58,7 @@ public class ChatManageServiceImpl implements ChatManageService {
         chatDO.setCreateTime(getCurrentTime());
         chatDO.setIsDelete(0);
         chatDO.setLastTime(getCurrentTime());
-        chatDO.setLastQuestion("Hello, welcome to using supersonic");
+        chatDO.setLastQuestion("");
         chatDO.setIsTop(0);
         chatDO.setAgentId(agentId);
         return chatRepository.createChat(chatDO);
@@ -90,7 +94,7 @@ public class ChatManageServiceImpl implements ChatManageService {
                 ChatMemoryUpdateReq memoryUpdateReq = ChatMemoryUpdateReq.builder().id(m.getId())
                         .status(status).humanReviewRet(reviewResult)
                         .humanReviewCmt("Reviewed as per user feedback").build();
-                memoryService.updateMemory(memoryUpdateReq, User.getDefaultUser());
+                memoryService.updateMemory(memoryUpdateReq, userService.getDefaultUser());
             });
         }
 
@@ -159,7 +163,7 @@ public class ChatManageServiceImpl implements ChatManageService {
             if (CollectionUtils.isEmpty(queryResp.getQueryResult().getQueryResults())) {
                 return true;
             }
-            Map<String, Object> data = queryResp.getQueryResult().getQueryResults().get(0);
+            Map<String, Object> data = queryResp.getQueryResult().getQueryResults().getFirst();
             return CollectionUtils.isEmpty(data);
         });
         queryResps = new ArrayList<>(queryResps.stream()
@@ -248,7 +252,7 @@ public class ChatManageServiceImpl implements ChatManageService {
         if (user != null && user.getTenantId() != null) {
             return user.getTenantId();
         }
-        return DEFAULT_TENANT_ID;
+        return tenantConfig.getDefaultTenantId();
     }
 
     @Override

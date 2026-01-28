@@ -5,7 +5,6 @@ import com.tencent.supersonic.common.pojo.DateConf;
 import com.tencent.supersonic.common.pojo.enums.DatePeriodEnum;
 import com.tencent.supersonic.common.pojo.enums.FilterOperatorEnum;
 import com.tencent.supersonic.common.pojo.enums.QueryType;
-import com.tencent.supersonic.demo.S2VisitsDemo;
 import com.tencent.supersonic.headless.api.pojo.SchemaElement;
 import com.tencent.supersonic.headless.api.pojo.SemanticParseInfo;
 import com.tencent.supersonic.headless.api.pojo.request.QueryFilter;
@@ -34,7 +33,7 @@ public class MetricTest extends BaseTest {
 
     @BeforeEach
     public void init() {
-        agent = getAgentByName(S2VisitsDemo.AGENT_NAME);
+        agent = getAgentByName("超音数分析助手");
         schema = schemaService.getSemanticSchema(agent.getDataSetIds());
     }
 

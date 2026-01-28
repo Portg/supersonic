@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.google.common.collect.Lists;
+import com.tencent.supersonic.auth.api.authentication.service.UserService;
 import com.tencent.supersonic.common.jsqlparser.SqlSelectHelper;
 import com.tencent.supersonic.common.pojo.User;
 import com.tencent.supersonic.common.pojo.enums.AuthType;
@@ -51,6 +52,9 @@ public class DataSetServiceImpl extends ServiceImpl<DataSetDOMapper, DataSetDO>
     @Lazy
     @Autowired
     private MetricService metricService;
+
+    @Autowired
+    private UserService userService;
 
     @Override
     public DataSetResp save(DataSetReq dataSetReq, User user) {
@@ -246,7 +250,7 @@ public class DataSetServiceImpl extends ServiceImpl<DataSetDOMapper, DataSetDO>
 
     @Override
     public Map<Long, List<Long>> getModelIdToDataSetIds() {
-        return getModelIdToDataSetIds(Lists.newArrayList(), User.getDefaultUser());
+        return getModelIdToDataSetIds(Lists.newArrayList(), userService.getDefaultUser());
     }
 
     private void conflictCheck(DataSetResp dataSetResp) {

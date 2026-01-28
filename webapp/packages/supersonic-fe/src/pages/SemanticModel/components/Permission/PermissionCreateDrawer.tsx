@@ -224,7 +224,7 @@ const PermissionCreateDrawer: React.FC<Props> = ({
                   showIcon
                   style={{ marginBottom: 16 }}
                 />
-                <Form form={form} layout="vertical">
+                <Form form={form} layout="vertical" name="permissionCreateForm">
                   <FormItem
                     name="dimensionFilters"
                     label="表达式"

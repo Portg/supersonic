@@ -1,43 +1,72 @@
 package com.tencent.supersonic.headless.server.executor;
 
+import com.tencent.supersonic.auth.api.authentication.service.UserService;
+import com.tencent.supersonic.auth.api.authorization.pojo.AuthGroup;
+import com.tencent.supersonic.auth.api.authorization.pojo.AuthRule;
+import com.tencent.supersonic.auth.api.authorization.service.AuthService;
+import com.tencent.supersonic.common.config.TemplateConfig;
 import com.tencent.supersonic.common.pojo.User;
 import com.tencent.supersonic.common.pojo.enums.AggregateTypeEnum;
-import com.tencent.supersonic.headless.server.pojo.SemanticTemplate;
-import com.tencent.supersonic.headless.server.pojo.SemanticTemplateConfig;
-import com.tencent.supersonic.headless.server.pojo.SemanticTemplateConfig.AgentConfig;
-import com.tencent.supersonic.headless.server.pojo.SemanticTemplateConfig.ConfigParam;
-import com.tencent.supersonic.headless.server.pojo.SemanticTemplateConfig.DataSetConfig;
-import com.tencent.supersonic.headless.server.pojo.SemanticTemplateConfig.DimensionConfig;
-import com.tencent.supersonic.headless.server.pojo.SemanticTemplateConfig.DomainConfig;
-import com.tencent.supersonic.headless.server.pojo.SemanticTemplateConfig.IdentifyConfig;
-import com.tencent.supersonic.headless.server.pojo.SemanticTemplateConfig.JoinCondition;
-import com.tencent.supersonic.headless.server.pojo.SemanticTemplateConfig.MeasureConfig;
-import com.tencent.supersonic.headless.server.pojo.SemanticTemplateConfig.ModelConfig;
-import com.tencent.supersonic.headless.server.pojo.SemanticTemplateConfig.ModelRelationConfig;
-import com.tencent.supersonic.headless.server.pojo.SemanticTemplateConfig.TermConfig;
-import com.tencent.supersonic.headless.server.service.SemanticTemplateService;
+import com.tencent.supersonic.common.pojo.enums.StatusEnum;
+import com.tencent.supersonic.common.pojo.enums.TypeEnums;
+import com.tencent.supersonic.headless.api.pojo.MetaFilter;
+import com.tencent.supersonic.headless.api.pojo.request.DictItemReq;
+import com.tencent.supersonic.headless.api.pojo.request.DictSingleTaskReq;
+import com.tencent.supersonic.headless.api.pojo.response.DatabaseResp;
+import com.tencent.supersonic.headless.api.pojo.response.DimensionResp;
+import com.tencent.supersonic.headless.api.pojo.response.ModelResp;
+import com.tencent.supersonic.headless.server.pojo.*;
+import com.tencent.supersonic.headless.server.pojo.SemanticTemplateConfig.*;
+import com.tencent.supersonic.headless.server.service.*;
+import com.tencent.supersonic.headless.server.service.impl.DictWordService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
- * Initializes builtin semantic templates at application startup. Converts existing Demo patterns
- * into reusable templates.
+ * Initializes builtin semantic templates at application startup and optionally auto-deploys them.
+ * Also creates supplementary demo data (auth groups, plugins, dict config) for specific templates.
  */
 @Component
-@Order(0) // Run before other demo initializers
+@Order(2)
 @Slf4j
 public class BuiltinSemanticTemplateInitializer implements CommandLineRunner {
 
     @Autowired
     private SemanticTemplateService semanticTemplateService;
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private TemplateConfig templateConfig;
+
+    @Autowired
+    private DatabaseService databaseService;
+
+    @Autowired
+    private AuthService authService;
+
+    @Autowired
+    private DimensionService dimensionService;
+
+    @Autowired
+    private ModelService modelService;
+
+    @Autowired
+    private DictConfService dictConfService;
+
+    @Autowired
+    private DictTaskService dictTaskService;
+
+    @Autowired
+    private DictWordService dictWordService;
 
     @Override
     public void run(String... args) {
@@ -46,10 +75,20 @@ public class BuiltinSemanticTemplateInitializer implements CommandLineRunner {
         } catch (Exception e) {
             log.error("Failed to initialize builtin templates", e);
         }
+
+        if (templateConfig.isAutoDeploy()) {
+            try {
+                autoDeployBuiltinTemplates();
+            } catch (Exception e) {
+                log.error("Failed to auto-deploy builtin templates", e);
+            }
+        }
     }
 
+    /**
+     * Initializes builtin semantic templates if they do not already exist.
+     */
     private void initBuiltinTemplates() {
-        // Check if already initialized
         List<SemanticTemplate> existingTemplates = semanticTemplateService.getBuiltinTemplates();
         if (!existingTemplates.isEmpty()) {
             log.info("Builtin templates already exist, skipping initialization");
@@ -57,20 +96,173 @@ public class BuiltinSemanticTemplateInitializer implements CommandLineRunner {
         }
 
         log.info("Initializing builtin semantic templates...");
-        User adminUser = User.getDefaultUser();
-
-        // Initialize Visits Template (based on S2VisitsDemo)
+        User adminUser = userService.getDefaultUser();
         initVisitsTemplate(adminUser);
-
-        // Initialize Singer Template (based on S2SingerDemo)
         initSingerTemplate(adminUser);
-
-        // Initialize Company Template (based on S2CompanyDemo)
         initCompanyTemplate(adminUser);
-
+        initSmallTalkTemplate(adminUser);
         log.info("Builtin semantic templates initialized successfully");
     }
 
+    /**
+     * Auto-deploys builtin templates that are not yet deployed.
+     */
+    private void autoDeployBuiltinTemplates() {
+        User user = userService.getDefaultUser();
+
+        // Get database for templates that need semantic models
+        List<DatabaseResp> databases = databaseService.getDatabaseList(user);
+        Long databaseId = CollectionUtils.isEmpty(databases) ? null : databases.getFirst().getId();
+
+        List<SemanticTemplate> builtinTemplates = semanticTemplateService.getBuiltinTemplates();
+        if (builtinTemplates.isEmpty()) {
+            return;
+        }
+
+        // Find already deployed template IDs
+        List<SemanticDeployment> deployments = semanticTemplateService.getDeploymentHistory(user);
+        Set<Long> deployedTemplateIds = deployments.stream()
+                .filter(d -> d.getStatus() == SemanticDeployment.DeploymentStatus.SUCCESS)
+                .map(SemanticDeployment::getTemplateId).collect(Collectors.toSet());
+
+        for (SemanticTemplate template : builtinTemplates) {
+            if (deployedTemplateIds.contains(template.getId())) {
+                log.info("Builtin template '{}' already deployed, skipping", template.getName());
+                continue;
+            }
+
+            // Check if this template requires a database (has domain config)
+            boolean needsDatabase = template.getTemplateConfig() != null
+                    && template.getTemplateConfig().getDomain() != null;
+            if (needsDatabase && databaseId == null) {
+                log.warn("No database available, skipping template: {}", template.getName());
+                continue;
+            }
+
+            try {
+                SemanticDeployParam param =
+                        buildDefaultDeployParam(template, needsDatabase ? databaseId : null);
+                log.info("Auto-deploying builtin template: {}", template.getName());
+                SemanticDeployment deployment =
+                        semanticTemplateService.executeDeployment(template.getId(), param, user);
+
+                if (deployment.getStatus() == SemanticDeployment.DeploymentStatus.SUCCESS) {
+                    log.info("Successfully auto-deployed template: {}", template.getName());
+                    postDeployVisitsExtras(template, deployment, user);
+                } else {
+                    log.error("Failed to auto-deploy template: {}, error: {}", template.getName(),
+                            deployment.getErrorMessage());
+                }
+            } catch (Exception e) {
+                log.error("Failed to auto-deploy template: {}", template.getName(), e);
+            }
+        }
+
+        // Load dict words after all templates are deployed
+        try {
+            dictWordService.loadDictWord();
+        } catch (Exception e) {
+            log.error("Failed to load dict words after auto-deploy", e);
+        }
+    }
+
+    private SemanticDeployParam buildDefaultDeployParam(SemanticTemplate template,
+            Long databaseId) {
+        SemanticDeployParam param = new SemanticDeployParam();
+        param.setDatabaseId(databaseId);
+        Map<String, String> params = new HashMap<>();
+        SemanticTemplateConfig config = template.getTemplateConfig();
+        if (config != null && !CollectionUtils.isEmpty(config.getConfigParams())) {
+            for (ConfigParam cp : config.getConfigParams()) {
+                if (cp.getDefaultValue() != null) {
+                    params.put(cp.getKey(), cp.getDefaultValue());
+                }
+            }
+        }
+        param.setParams(params);
+        return param;
+    }
+
+    /**
+     * Post-deploy extras for Visits template: auth groups, plugin, dict config.
+     * 
+     * @param template The deployed semantic template
+     * @param deployment Thedeployment record
+     * @param user The userperforming the deployment
+     */
+    private void postDeployVisitsExtras(SemanticTemplate template, SemanticDeployment deployment,
+            User user) {
+        if (!"visits_template".equals(template.getBizName())) {
+            return;
+        }
+        SemanticDeployResult result = deployment.getResultDetail();
+        if (result == null || result.getDomainId() == null) {
+            return;
+        }
+        try {
+            // Find the stay time model for auth groups
+            Long domainId = result.getDomainId();
+            List<ModelResp> models =
+                    modelService.getModelByDomainIds(Collections.singletonList(domainId));
+            models.stream().filter(m -> "s2_stay_time_statis".equals(m.getBizName())).findFirst()
+                    .ifPresent(this::addVisitsAuthGroups);
+
+            // Enable dict for department and user_name dimensions
+            enableDictForVisits(domainId, user);
+        } catch (Exception e) {
+            log.warn("Failed to create Visits extras (auth/dict/plugin): {}", e.getMessage());
+        }
+    }
+
+    private void addVisitsAuthGroups(ModelResp stayTimeModel) {
+        // Column permission for jack
+        AuthGroup columnPerm = new AuthGroup();
+        columnPerm.setModelId(stayTimeModel.getId());
+        columnPerm.setName("jack_column_permission");
+        AuthRule authRule = new AuthRule();
+        authRule.setMetrics(Collections.singletonList("stay_hours"));
+        authRule.setDimensions(Collections.singletonList("page"));
+        columnPerm.setAuthRules(Collections.singletonList(authRule));
+        columnPerm.setAuthorizedUsers(Collections.singletonList("jack"));
+        columnPerm.setAuthorizedDepartmentIds(Collections.emptyList());
+        authService.addOrUpdateAuthGroup(columnPerm);
+
+        // Row permission for tom
+        AuthGroup rowPerm = new AuthGroup();
+        rowPerm.setModelId(stayTimeModel.getId());
+        rowPerm.setName("tom_row_permission");
+        rowPerm.setAuthRules(Collections.emptyList());
+        rowPerm.setDimensionFilters(Collections.singletonList("user_name = 'tom'"));
+        rowPerm.setAuthorizedUsers(Collections.singletonList("tom"));
+        rowPerm.setAuthorizedDepartmentIds(Collections.emptyList());
+        authService.addOrUpdateAuthGroup(rowPerm);
+        log.info("Created Visits auth groups");
+    }
+
+    private void enableDictForVisits(Long domainId, User user) {
+        List<ModelResp> models =
+                modelService.getModelByDomainIds(Collections.singletonList(domainId));
+        for (ModelResp model : models) {
+            MetaFilter filter = new MetaFilter();
+            filter.setModelIds(Collections.singletonList(model.getId()));
+            List<DimensionResp> dims = dimensionService.getDimensions(filter);
+            for (DimensionResp dim : dims) {
+                if ("department".equals(dim.getBizName()) || "user_name".equals(dim.getBizName())) {
+                    dictConfService.addDictConf(DictItemReq.builder().type(TypeEnums.DIMENSION)
+                            .itemId(dim.getId()).status(StatusEnum.ONLINE).build(), user);
+                    dictTaskService.addDictTask(DictSingleTaskReq.builder().itemId(dim.getId())
+                            .type(TypeEnums.DIMENSION).build(), user);
+                }
+            }
+        }
+        log.info("Enabled dict for Visits dimensions");
+    }
+
+    /**
+     * Initialize Visits Semantic Template
+     * 
+     * @param user The user performing the initialization
+     */
     private void initVisitsTemplate(User user) {
         SemanticTemplate template = new SemanticTemplate();
         template.setName("访问统计模板");
@@ -83,7 +275,7 @@ public class BuiltinSemanticTemplateInitializer implements CommandLineRunner {
 
         // Config params
         List<ConfigParam> params = new ArrayList<>();
-        params.add(createParam("domain_name", "域名称", "TEXT", "产品数据域", true, "语义域名称"));
+        params.add(createParam("domain_name", "域名称", "TEXT", "超音数", true, "语义域名称"));
         params.add(createParam("domain_bizname", "域代码", "TEXT", "supersonic", true, "语义域代码"));
         params.add(
                 createParam("table_user", "用户表", "TABLE", "s2_user_department", true, "用户部门信息表"));
@@ -230,11 +422,28 @@ public class BuiltinSemanticTemplateInitializer implements CommandLineRunner {
         terms.add(vipTerm);
         config.setTerms(terms);
 
+        // Plugin config
+        PluginConfig plugin = new PluginConfig();
+        plugin.setType("WebServiceQuery");
+        plugin.setName("超音数流量分析小助手");
+        plugin.setDescription("用于分析超音数的流量概况，包含UV、PV等核心指标的追踪。P.S. 仅作为示例展示，无实际内容");
+        plugin.setPattern("用于分析超音数的流量概况，包含UV、PV等核心指标的追踪。P.S. 仅作为示例展示，无实际内容");
+        plugin.setExamples(Collections.singletonList("tom最近访问超音数情况怎么样"));
+        plugin.setDataSetIds(Collections.singletonList(-1L));
+        plugin.setConfig(Map.of("url", "http://localhost:9080/api/chat/plugin/pluginDemo",
+                "paramOptions", List.of()));
+        config.setPlugins(Collections.singletonList(plugin));
+
         template.setTemplateConfig(config);
         semanticTemplateService.saveBuiltinTemplate(template, user);
         log.info("Initialized visits template");
     }
 
+    /*
+     * Initialize Singer Semantic Template
+     * 
+     * @param user The user performing the initialization
+     */
     private void initSingerTemplate(User user) {
         SemanticTemplate template = new SemanticTemplate();
         template.setName("歌手库模板");
@@ -245,14 +454,12 @@ public class BuiltinSemanticTemplateInitializer implements CommandLineRunner {
 
         SemanticTemplateConfig config = new SemanticTemplateConfig();
 
-        // Config params
         List<ConfigParam> params = new ArrayList<>();
-        params.add(createParam("domain_name", "域名称", "TEXT", "歌手数据域", true, "语义域名称"));
+        params.add(createParam("domain_name", "域名称", "TEXT", "艺人", true, "语义域名称"));
         params.add(createParam("domain_bizname", "域代码", "TEXT", "singer", true, "语义域代码"));
         params.add(createParam("table_singer", "歌手表", "TABLE", "singer", true, "歌手信息表"));
         config.setConfigParams(params);
 
-        // Domain
         DomainConfig domain = new DomainConfig();
         domain.setName("${domain_name}");
         domain.setBizName("${domain_bizname}");
@@ -260,7 +467,6 @@ public class BuiltinSemanticTemplateInitializer implements CommandLineRunner {
         domain.setIsOpen(1);
         config.setDomain(domain);
 
-        // Model: Singer
         ModelConfig singerModel = new ModelConfig();
         singerModel.setName("歌手库");
         singerModel.setBizName("singer");
@@ -311,14 +517,12 @@ public class BuiltinSemanticTemplateInitializer implements CommandLineRunner {
 
         config.setModels(Collections.singletonList(singerModel));
 
-        // DataSet
         DataSetConfig dataSet = new DataSetConfig();
         dataSet.setName("${domain_name}数据集");
         dataSet.setBizName("${domain_bizname}_dataset");
         dataSet.setDescription("包含歌手相关的指标和维度");
         config.setDataSet(dataSet);
 
-        // Agent
         AgentConfig agent = new AgentConfig();
         agent.setName("${domain_name}分析助手");
         agent.setDescription("帮助您分析歌手和歌曲数据");
@@ -331,6 +535,11 @@ public class BuiltinSemanticTemplateInitializer implements CommandLineRunner {
         log.info("Initialized singer template");
     }
 
+    /**
+     * Initialize Company Semantic Template
+     * 
+     * @param user The user performing the initialization
+     */
     private void initCompanyTemplate(User user) {
         SemanticTemplate template = new SemanticTemplate();
         template.setName("企业分析模板");
@@ -341,16 +550,14 @@ public class BuiltinSemanticTemplateInitializer implements CommandLineRunner {
 
         SemanticTemplateConfig config = new SemanticTemplateConfig();
 
-        // Config params
         List<ConfigParam> params = new ArrayList<>();
-        params.add(createParam("domain_name", "域名称", "TEXT", "企业数据域", true, "语义域名称"));
+        params.add(createParam("domain_name", "域名称", "TEXT", "企业", true, "语义域名称"));
         params.add(createParam("domain_bizname", "域代码", "TEXT", "company", true, "语义域代码"));
         params.add(createParam("table_company", "企业表", "TABLE", "company", true, "企业信息表"));
         params.add(createParam("table_brand", "品牌表", "TABLE", "brand", true, "品牌信息表"));
         params.add(createParam("table_revenue", "收入表", "TABLE", "brand_revenue", true, "品牌收入表"));
         config.setConfigParams(params);
 
-        // Domain
         DomainConfig domain = new DomainConfig();
         domain.setName("${domain_name}");
         domain.setBizName("${domain_bizname}");
@@ -358,7 +565,6 @@ public class BuiltinSemanticTemplateInitializer implements CommandLineRunner {
         domain.setIsOpen(1);
         config.setDomain(domain);
 
-        // Model 1: Company
         ModelConfig companyModel = new ModelConfig();
         companyModel.setName("企业信息");
         companyModel.setBizName("company");
@@ -380,7 +586,6 @@ public class BuiltinSemanticTemplateInitializer implements CommandLineRunner {
         industryDim.setEnableDictValue(true);
         companyModel.setDimensions(Collections.singletonList(industryDim));
 
-        // Model 2: Brand
         ModelConfig brandModel = new ModelConfig();
         brandModel.setName("品牌信息");
         brandModel.setBizName("brand");
@@ -407,7 +612,6 @@ public class BuiltinSemanticTemplateInitializer implements CommandLineRunner {
         categoryDim.setType("categorical");
         brandModel.setDimensions(Collections.singletonList(categoryDim));
 
-        // Model 3: Brand Revenue
         ModelConfig revenueModel = new ModelConfig();
         revenueModel.setName("品牌收入");
         revenueModel.setBizName("brand_revenue");
@@ -438,20 +642,17 @@ public class BuiltinSemanticTemplateInitializer implements CommandLineRunner {
 
         config.setModels(Arrays.asList(companyModel, brandModel, revenueModel));
 
-        // Model Relations
         List<ModelRelationConfig> relations = new ArrayList<>();
         relations.add(createRelation("brand", "company", "company_name"));
         relations.add(createRelation("brand_revenue", "brand", "brand_name"));
         config.setModelRelations(relations);
 
-        // DataSet
         DataSetConfig dataSet = new DataSetConfig();
         dataSet.setName("${domain_name}数据集");
         dataSet.setBizName("${domain_bizname}_dataset");
         dataSet.setDescription("包含企业经营相关的指标和维度");
         config.setDataSet(dataSet);
 
-        // Agent
         AgentConfig agent = new AgentConfig();
         agent.setName("${domain_name}分析助手");
         agent.setDescription("帮助您分析企业经营数据");
@@ -464,6 +665,51 @@ public class BuiltinSemanticTemplateInitializer implements CommandLineRunner {
         log.info("Initialized company template");
     }
 
+    /**
+     * Initialize Small Talk Semantic Template
+     * 
+     * @param user The user performing the initialization
+     */
+    private void initSmallTalkTemplate(User user) {
+        SemanticTemplate template = new SemanticTemplate();
+        template.setName("闲聊助手模板");
+        template.setBizName("smalltalk_template");
+        template.setCategory("CHAT");
+        template.setDescription("直接与大模型对话，验证连通性。无需语义模型，仅创建闲聊Agent。");
+        template.setStatus(1);
+
+        SemanticTemplateConfig config = new SemanticTemplateConfig();
+        // Agent-only template: no domain, no models, no dataSet, no terms
+
+        AgentConfig agent = new AgentConfig();
+        agent.setName("闲聊助手");
+        agent.setDescription("直接与大模型对话，验证连通性");
+        agent.setEnableSearch(false);
+        agent.setExamples(Arrays.asList("如何才能变帅", "如何才能赚更多钱", "如何才能世界和平"));
+
+        // Enable PlainText, disable S2SQL_SC
+        Map<String, Boolean> overrides = new HashMap<>();
+        overrides.put("PLAIN_TEXT", true);
+        overrides.put("S2SQL_SC", false);
+        agent.setChatAppOverrides(overrides);
+
+        config.setAgent(agent);
+        template.setTemplateConfig(config);
+        semanticTemplateService.saveBuiltinTemplate(template, user);
+        log.info("Initialized smalltalk template");
+    }
+
+    /**
+     * Helper to create ConfigParam
+     * 
+     * @param key Parameter key
+     * @param name Parameter name
+     * @param type Parameter type
+     * @param defaultValue Default value
+     * @param required Whether required
+     * @param description Parameter description
+     * @return ConfigParam instance
+     */
     private ConfigParam createParam(String key, String name, String type, String defaultValue,
             boolean required, String description) {
         ConfigParam param = new ConfigParam();
@@ -476,6 +722,14 @@ public class BuiltinSemanticTemplateInitializer implements CommandLineRunner {
         return param;
     }
 
+    /**
+     * Helper to create ModelRelationConfig
+     * 
+     * @param fromBizName From model biz name
+     * @param toBizName To model biz name
+     * @param joinField Join field name
+     * @return ModelRelationConfig instance
+     */
     private ModelRelationConfig createRelation(String fromBizName, String toBizName,
             String joinField) {
         ModelRelationConfig relation = new ModelRelationConfig();

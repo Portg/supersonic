@@ -3,7 +3,7 @@ package com.tencent.supersonic.common.interceptor;
 import com.tencent.supersonic.common.config.TenantConfig;
 import com.tencent.supersonic.common.context.TenantContext;
 import com.tencent.supersonic.common.pojo.User;
-import com.tencent.supersonic.common.pojo.exception.InvalidArgumentException;
+import com.tencent.supersonic.common.service.CurrentUserProvider;
 import com.tencent.supersonic.common.util.ContextUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -19,10 +19,6 @@ import org.springframework.web.servlet.ModelAndView;
 @Slf4j
 public class TenantInterceptor implements HandlerInterceptor {
 
-    private static final Long DEFAULT_TENANT_ID = 1L;
-    private static final String USER_SERVICE_INTERFACE =
-            "com.tencent.supersonic.auth.api.authentication.service.UserService";
-
     /**
      * Get TenantConfig bean lazily at runtime.
      */
@@ -35,16 +31,12 @@ public class TenantInterceptor implements HandlerInterceptor {
         }
     }
 
-    /**
-     * Get current user from UserService via reflection to avoid circular dependency.
-     */
     private User getCurrentUser(HttpServletRequest request) {
         try {
-            Class<?> userServiceClass = Class.forName(USER_SERVICE_INTERFACE);
-            Object userService = ContextUtils.getBean(userServiceClass);
-            java.lang.reflect.Method method = userServiceClass.getMethod("getCurrentUser",
-                    HttpServletRequest.class, HttpServletResponse.class);
-            return (User) method.invoke(userService, request, null);
+            CurrentUserProvider provider = ContextUtils.getBean(CurrentUserProvider.class);
+            if (provider != null) {
+                return provider.getCurrentUser(request, null);
+            }
         } catch (Exception e) {
             log.error("Failed to get current user: {}", e.getMessage());
         }
@@ -67,16 +59,9 @@ public class TenantInterceptor implements HandlerInterceptor {
             TenantContext.setTenantId(tenantId);
         } else {
             // Tenant ID not resolved, try to use default
-            Long defaultTenantId = config != null ? config.getDefaultTenantId() : DEFAULT_TENANT_ID;
-            if (defaultTenantId != null) {
-                TenantContext.setTenantId(defaultTenantId);
-                log.warn("Using default tenant: tenantId={} for path={}", defaultTenantId,
-                        requestUri);
-            } else if (config.isRequired()) {
-                // No default available and tenant is required
-                log.error("Tenant ID is required but not provided for path: {}", requestUri);
-                throw new InvalidArgumentException("Tenant ID is required");
-            }
+            Long defaultTenantId = config != null ? config.getDefaultTenantId() : 1L;
+            TenantContext.setTenantId(defaultTenantId);
+            log.warn("Using default tenant: tenantId={} for path={}", defaultTenantId, requestUri);
         }
 
         return true;
@@ -154,6 +139,8 @@ public class TenantInterceptor implements HandlerInterceptor {
             Object handler, Exception ex) throws Exception {
         // Clear tenant context to prevent memory leaks
         TenantContext.clear();
-        log.debug("Cleared tenant context for request: {}", request.getRequestURI());
+        if (log.isDebugEnabled()) {
+            log.debug("Cleared tenant context for request: {}", request.getRequestURI());
+        }
     }
 }

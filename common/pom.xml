@@ -160,6 +160,12 @@
             <version>${redisson.version}</version>
             <optional>true</optional>
         </dependency>
+        <!-- Spring Data Redis (optional, required when any cache namespace resolves to REDIS) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+            <optional>true</optional>
+        </dependency>
 
         <!--langchain4j-->
         <dependency>

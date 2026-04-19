@@ -86,4 +86,22 @@ class RowLevelPolicyCorrectorTest {
         String out = new RowLevelPolicyCorrector().rewrite(broken, ctx(p));
         assertEquals(broken, out);
     }
+
+    @Test
+    void injectsFilterWhenNoExistingWhere() {
+        RowPolicy p = new RowPolicy("P", 1L, List.of("t"), "region = 'APAC'", null);
+        String out = new RowLevelPolicyCorrector().rewrite("SELECT a FROM t", ctx(p));
+        assertEquals(norm("SELECT a FROM t WHERE (region = 'APAC')"), norm(out));
+    }
+
+    @Test
+    void multipleMatchingPoliciesAllInjected() {
+        RowPolicy p1 = new RowPolicy("P1", 1L, List.of("t"), "region = 'APAC'", null);
+        RowPolicy p2 = new RowPolicy("P2", 1L, List.of("t"), "role = 'admin'", null);
+        String out =
+                new RowLevelPolicyCorrector().rewrite("SELECT a FROM t WHERE a = 1", ctx(p1, p2));
+        String n = norm(out);
+        assertTrue(n.contains("region = 'APAC'"), "first policy missing");
+        assertTrue(n.contains("role = 'admin'"), "second policy missing");
+    }
 }

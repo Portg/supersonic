@@ -30,7 +30,7 @@ public class RowLevelPolicyCorrector implements PhysicalSqlCorrector {
             return sql;
         if (ctx == null || ctx.isShadowMode())
             return sql;
-        if (ctx.getRowPolicies() == null || ctx.getRowPolicies().isEmpty())
+        if (ctx.getRowPolicies().isEmpty())
             return sql;
 
         try {
@@ -101,7 +101,7 @@ public class RowLevelPolicyCorrector implements PhysicalSqlCorrector {
     }
 
     private List<String> referencedTableNames(PlainSelect ps) {
-        ArrayList<String> names = new ArrayList<>();
+        List<String> names = new ArrayList<>();
         if (ps.getFromItem()instanceof Table t)
             names.add(t.getName());
         if (ps.getJoins() != null) {

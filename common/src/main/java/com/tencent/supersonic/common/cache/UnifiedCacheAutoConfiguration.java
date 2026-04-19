@@ -2,7 +2,9 @@ package com.tencent.supersonic.common.cache;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingClass;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -36,24 +38,7 @@ public class UnifiedCacheAutoConfiguration {
         return m;
     }
 
-    @Bean
-    @ConditionalOnMissingBean
-    public CacheProviderRegistry cacheProviderRegistry(UnifiedCacheProperties properties,
-            ObjectProvider<StringRedisTemplate> redisProvider) {
-        StringRedisTemplate redis = redisProvider.getIfAvailable();
-        List<CacheProvider> providers = new ArrayList<>();
-        Map<String, CacheNamespace> resolved = resolveNamespaces(properties);
-        for (CacheNamespace ns : resolved.values()) {
-            CacheType effective =
-                    ns.getTypeOverride() != null ? ns.getTypeOverride() : properties.getType();
-            providers.add(buildProvider(ns, effective, redis));
-        }
-        log.info("Unified cache initialized: globalType={}, namespaces={}, redisAvailable={}",
-                properties.getType(), resolved.keySet(), redis != null);
-        return new CacheProviderRegistry(providers);
-    }
-
-    private Map<String, CacheNamespace> resolveNamespaces(UnifiedCacheProperties properties) {
+    static Map<String, CacheNamespace> resolveNamespaces(UnifiedCacheProperties properties) {
         Map<String, CacheNamespace> out = new LinkedHashMap<>(defaults());
         for (Map.Entry<String, UnifiedCacheProperties.NamespaceConfig> e : properties
                 .getNamespaces().entrySet()) {
@@ -83,18 +68,26 @@ public class UnifiedCacheAutoConfiguration {
         return out;
     }
 
-    private CacheProvider buildProvider(CacheNamespace ns, CacheType type,
-            StringRedisTemplate redis) {
-        if (type == CacheType.REDIS) {
-            if (redis == null) {
+    // Caffeine-only fallback: used when spring-data-redis is absent from the classpath.
+    // Launchers that never include spring-data-redis (chat, headless) use this path.
+    @Bean
+    @ConditionalOnMissingBean(CacheProviderRegistry.class)
+    @ConditionalOnMissingClass("org.springframework.data.redis.core.StringRedisTemplate")
+    public CacheProviderRegistry caffeineOnlyRegistry(UnifiedCacheProperties properties) {
+        Map<String, CacheNamespace> resolved = resolveNamespaces(properties);
+        List<CacheProvider> providers = new ArrayList<>();
+        for (CacheNamespace ns : resolved.values()) {
+            CacheType effective =
+                    ns.getTypeOverride() != null ? ns.getTypeOverride() : properties.getType();
+            if (effective == CacheType.REDIS) {
                 log.warn(
-                        "Cache namespace '{}' requested REDIS but no StringRedisTemplate available — falling back to Caffeine.",
+                        "Cache namespace '{}' requested REDIS but spring-data-redis is not on the classpath — falling back to Caffeine.",
                         ns.getName());
-                return new CaffeineCacheProvider(ns);
             }
-            return new RedisCacheProvider(ns, redis);
+            providers.add(new CaffeineCacheProvider(ns));
         }
-        return new CaffeineCacheProvider(ns);
+        log.info("Unified cache (no-Redis mode): namespaces={}", resolved.keySet());
+        return new CacheProviderRegistry(providers);
     }
 
     @Bean
@@ -102,5 +95,44 @@ public class UnifiedCacheAutoConfiguration {
     public org.springframework.cache.CacheManager unifiedSpringCacheManager(
             CacheProviderRegistry registry) {
         return new UnifiedSpringCacheManager(registry);
+    }
+
+    // Inner class loaded only when spring-data-redis is on the classpath.
+    // Isolates StringRedisTemplate references so launchers without Redis can still start.
+    @Slf4j
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnClass(name = "org.springframework.data.redis.core.StringRedisTemplate")
+    static class WithRedis {
+
+        @Bean
+        @ConditionalOnMissingBean
+        public CacheProviderRegistry cacheProviderRegistry(UnifiedCacheProperties properties,
+                ObjectProvider<StringRedisTemplate> redisProvider) {
+            StringRedisTemplate redis = redisProvider.getIfAvailable();
+            Map<String, CacheNamespace> resolved = resolveNamespaces(properties);
+            List<CacheProvider> providers = new ArrayList<>();
+            for (CacheNamespace ns : resolved.values()) {
+                CacheType effective =
+                        ns.getTypeOverride() != null ? ns.getTypeOverride() : properties.getType();
+                providers.add(buildProvider(ns, effective, redis));
+            }
+            log.info("Unified cache initialized: globalType={}, namespaces={}, redisAvailable={}",
+                    properties.getType(), resolved.keySet(), redis != null);
+            return new CacheProviderRegistry(providers);
+        }
+
+        private CacheProvider buildProvider(CacheNamespace ns, CacheType type,
+                StringRedisTemplate redis) {
+            if (type == CacheType.REDIS) {
+                if (redis == null) {
+                    log.warn(
+                            "Cache namespace '{}' requested REDIS but no StringRedisTemplate available — falling back to Caffeine.",
+                            ns.getName());
+                    return new CaffeineCacheProvider(ns);
+                }
+                return new RedisCacheProvider(ns, redis);
+            }
+            return new CaffeineCacheProvider(ns);
+        }
     }
 }

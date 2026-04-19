@@ -6,8 +6,8 @@ import javax.crypto.spec.SecretKeySpec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tencent.supersonic.auth.api.authentication.annotation.AuthenticationIgnore;
-import com.tencent.supersonic.feishu.api.cache.FeishuCacheService;
 import com.tencent.supersonic.feishu.api.config.FeishuProperties;
+import com.tencent.supersonic.feishu.server.cache.FeishuCacheFacade;
 import com.tencent.supersonic.feishu.server.service.FeishuBotService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -37,7 +37,7 @@ public class FeishuEventController {
 
     private final FeishuProperties properties;
     private final FeishuBotService botService;
-    private final FeishuCacheService cacheService;
+    private final FeishuCacheFacade cacheService;
     private final ObjectMapper objectMapper;
 
     /**

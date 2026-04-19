@@ -379,6 +379,7 @@
                         </dependency>
                     </dependencies>
                     <configuration>
+                        <excludedGroups>integration</excludedGroups>
                         <systemPropertyVariables>
                             <net.bytebuddy.experimental>true</net.bytebuddy.experimental>
                         </systemPropertyVariables>

@@ -4,6 +4,7 @@ import com.tencent.supersonic.common.storage.local.LocalFileStorage;
 import com.tencent.supersonic.common.storage.oss.OssFileStorage;
 import com.tencent.supersonic.common.storage.s3.S3FileStorage;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -12,7 +13,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Slf4j
-@Configuration
+@AutoConfiguration
 @EnableConfigurationProperties(StorageProperties.class)
 public class FileStorageAutoConfiguration {
 

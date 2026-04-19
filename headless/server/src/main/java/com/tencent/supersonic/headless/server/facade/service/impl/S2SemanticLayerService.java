@@ -32,6 +32,8 @@ import com.tencent.supersonic.headless.core.pojo.SqlQuery;
 import com.tencent.supersonic.headless.core.pojo.StructQuery;
 import com.tencent.supersonic.headless.core.translator.SemanticTranslator;
 import com.tencent.supersonic.headless.core.translator.TranslatorConfig;
+import com.tencent.supersonic.headless.core.translator.corrector.PolicyContext;
+import com.tencent.supersonic.headless.core.translator.corrector.policy.PolicyResolver;
 import com.tencent.supersonic.headless.core.utils.ComponentFactory;
 import com.tencent.supersonic.headless.server.annotation.S2DataPermission;
 import com.tencent.supersonic.headless.server.manager.SemanticSchemaManager;
@@ -65,6 +67,7 @@ public class S2SemanticLayerService implements SemanticLayerService {
     private final DomainService domainService;
     private final DimensionService dimensionService;
     private final TranslatorConfig translatorConfig;
+    private final PolicyResolver policyResolver;
     private final QueryCache queryCache = ComponentFactory.getQueryCache();
     private final List<QueryExecutor> queryExecutors = ComponentFactory.getQueryExecutors();
 
@@ -74,7 +77,7 @@ public class S2SemanticLayerService implements SemanticLayerService {
             MetricDrillDownChecker metricDrillDownChecker,
             KnowledgeBaseService knowledgeBaseService, MetricService metricService,
             DimensionService dimensionService, DomainService domainService,
-            TranslatorConfig translatorConfig) {
+            TranslatorConfig translatorConfig, PolicyResolver policyResolver) {
         this.statUtils = statUtils;
         this.queryUtils = queryUtils;
         this.semanticSchemaManager = semanticSchemaManager;
@@ -87,6 +90,7 @@ public class S2SemanticLayerService implements SemanticLayerService {
         this.dimensionService = dimensionService;
         this.domainService = domainService;
         this.translatorConfig = translatorConfig;
+        this.policyResolver = policyResolver;
     }
 
     public DataSetSchema getDataSetSchema(Long id) {
@@ -97,6 +101,7 @@ public class S2SemanticLayerService implements SemanticLayerService {
     @Override
     public SemanticTranslateResp translate(SemanticQueryReq queryReq, User user) throws Exception {
         QueryStatement queryStatement = buildQueryStatement(queryReq, user);
+        populatePolicyContext(queryStatement, queryReq, user);
         semanticTranslator.translate(queryStatement);
         return SemanticTranslateResp.builder().querySQL(queryStatement.getSql())
                 .isOk(queryStatement.isOk()).errMsg(queryStatement.getErrMsg()).build();
@@ -128,6 +133,7 @@ public class S2SemanticLayerService implements SemanticLayerService {
 
             // 3 translate query
             QueryStatement queryStatement = buildQueryStatement(queryReq, user);
+            populatePolicyContext(queryStatement, queryReq, user);
             if (!queryStatement.isTranslated()) {
                 semanticTranslator.translate(queryStatement);
             }
@@ -303,6 +309,32 @@ public class S2SemanticLayerService implements SemanticLayerService {
     @Override
     public List<MetricResp> getMetrics(MetaFilter metaFilter) {
         return metricService.getMetrics(metaFilter);
+    }
+
+    private void populatePolicyContext(QueryStatement queryStatement, SemanticQueryReq queryReq,
+            User user) {
+        if (queryStatement.getPolicyContext() != null || user == null) {
+            return;
+        }
+        Set<Long> modelIds = queryReq.getModelIdSet();
+        if (modelIds == null || modelIds.isEmpty()) {
+            // fall back to model IDs from the resolved semantic schema
+            SemanticSchemaResp schema = queryStatement.getSemanticSchema();
+            if (schema != null && !CollectionUtils.isEmpty(schema.getModelIds())) {
+                modelIds = new HashSet<>(schema.getModelIds());
+            }
+        }
+        if (modelIds == null || modelIds.isEmpty()) {
+            return;
+        }
+        PolicyContext ctx = new PolicyContext();
+        ctx.setUser(user);
+        ctx.setModelIds(modelIds);
+        ctx.setDataSetId(queryReq.getDataSetId());
+        ctx.setRowPolicies(policyResolver.resolveRowPolicies(user, modelIds));
+        ctx.setColumnPolicies(policyResolver.resolveColumnPolicies(user, modelIds));
+        ctx.setShadowMode(false); // Task 8 will introduce PolicyCorrectorProperties
+        queryStatement.setPolicyContext(ctx);
     }
 
     private QueryStatement buildQueryStatement(SemanticQueryReq semanticQueryReq, User user) {

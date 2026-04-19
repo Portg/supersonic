@@ -33,11 +33,11 @@ public class ExportFileCleanupTask {
             try {
                 fileStorage.delete(task.getFileLocation());
                 log.info("Deleted expired export file: {}", task.getFileLocation());
+                task.setStatus(ExportTaskStatus.EXPIRED.name());
+                exportTaskMapper.updateById(task);
             } catch (Exception e) {
                 log.warn("Failed to delete export file: {}", task.getFileLocation(), e);
             }
-            task.setStatus(ExportTaskStatus.EXPIRED.name());
-            exportTaskMapper.updateById(task);
         }
         if (!expiredTasks.isEmpty()) {
             log.info("Cleaned up {} expired export tasks", expiredTasks.size());

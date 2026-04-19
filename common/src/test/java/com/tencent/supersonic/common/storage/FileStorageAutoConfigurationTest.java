@@ -3,7 +3,9 @@ package com.tencent.supersonic.common.storage;
 import com.tencent.supersonic.common.storage.local.LocalFileStorage;
 import com.tencent.supersonic.common.storage.s3.S3FileStorage;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.context.annotation.ImportCandidates;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,5 +37,12 @@ class FileStorageAutoConfigurationTest {
                 "s2.storage.s3.secret-key=sk", "s2.storage.s3.path-style=true").run(ctx -> {
                     assertThat(ctx.getBean(FileStorage.class)).isInstanceOf(S3FileStorage.class);
                 });
+    }
+
+    @Test
+    void isRegisteredForSpringBootAutoConfigurationImport() {
+        assertThat(ImportCandidates.load(AutoConfiguration.class,
+                Thread.currentThread().getContextClassLoader()))
+                        .contains(FileStorageAutoConfiguration.class.getName());
     }
 }

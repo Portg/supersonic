@@ -5,6 +5,7 @@ import com.tencent.supersonic.common.storage.FileStorage;
 import com.tencent.supersonic.common.storage.StorageProperties;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.testcontainers.containers.MinIOContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -21,6 +22,7 @@ import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.*;
 
 @Testcontainers
+@Tag("integration")
 class S3FileStorageTest extends AbstractFileStorageContractTest {
 
     @Container

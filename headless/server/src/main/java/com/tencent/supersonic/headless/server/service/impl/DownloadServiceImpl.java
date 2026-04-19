@@ -6,7 +6,6 @@ import com.alibaba.excel.util.FileUtils;
 import com.alibaba.excel.write.metadata.WriteSheet;
 import com.google.common.collect.Lists;
 import com.tencent.supersonic.common.pojo.*;
-import com.tencent.supersonic.common.storage.FileStorage;
 import com.tencent.supersonic.common.util.DateUtils;
 import com.tencent.supersonic.headless.api.facade.service.SemanticLayerService;
 import com.tencent.supersonic.headless.api.pojo.DrillDownDimension;
@@ -53,14 +52,11 @@ public class DownloadServiceImpl implements DownloadService {
 
     private final SemanticLayerService queryService;
 
-    private final FileStorage fileStorage;
-
     public DownloadServiceImpl(MetricService metricService, DimensionService dimensionService,
-            SemanticLayerService queryService, FileStorage fileStorage) {
+            SemanticLayerService queryService) {
         this.metricService = metricService;
         this.dimensionService = dimensionService;
         this.queryService = queryService;
-        this.fileStorage = fileStorage;
     }
 
     @Override
@@ -286,9 +282,7 @@ public class DownloadServiceImpl implements DownloadService {
     }
 
     private void downloadFile(HttpServletResponse response, File file, String filename) {
-        log.debug("Downloaded sync file via storage backend: {}", fileStorage.getStorageType());
         try {
-            byte[] buffer = readFileToByteArray(file);
             response.reset();
             response.setCharacterEncoding("UTF-8");
             response.addHeader("Content-Disposition",
@@ -296,19 +290,11 @@ public class DownloadServiceImpl implements DownloadService {
             response.addHeader("Content-Length", "" + file.length());
             try (OutputStream outputStream = new BufferedOutputStream(response.getOutputStream())) {
                 response.setContentType("application/octet-stream");
-                outputStream.write(buffer);
+                Files.copy(file.toPath(), outputStream);
                 outputStream.flush();
             }
         } catch (Exception e) {
             log.error("failed to download file", e);
-        }
-    }
-
-    private byte[] readFileToByteArray(File file) throws IOException {
-        try (InputStream fis = new BufferedInputStream(Files.newInputStream(file.toPath()))) {
-            byte[] buffer = new byte[fis.available()];
-            fis.read(buffer);
-            return buffer;
         }
     }
 }

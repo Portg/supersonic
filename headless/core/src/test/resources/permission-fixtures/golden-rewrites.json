@@ -1,0 +1,83 @@
+[
+  {
+    "name": "simple_select_single_filter",
+    "user": "alice",
+    "rowPolicies": [
+      {"policyId": "P1", "modelId": 1, "tableBizNames": ["s2_user_orders"], "filterExpression": "region = 'APAC'"}
+    ],
+    "columnPolicies": [],
+    "inputSql": "SELECT user_id, amount FROM s2_user_orders WHERE status = 'PAID'",
+    "expectedSql": "SELECT user_id, amount FROM s2_user_orders WHERE status = 'PAID' AND (region = 'APAC')"
+  },
+  {
+    "name": "select_with_inner_join",
+    "user": "alice",
+    "rowPolicies": [
+      {"policyId": "P1", "modelId": 1, "tableBizNames": ["s2_user_orders"], "filterExpression": "region = 'APAC'"},
+      {"policyId": "P2", "modelId": 2, "tableBizNames": ["s2_product"], "filterExpression": "owner = 'alice'"}
+    ],
+    "columnPolicies": [],
+    "inputSql": "SELECT o.id FROM s2_user_orders o JOIN s2_product p ON o.pid = p.id WHERE o.ts > '2026-01-01'",
+    "expectedSql": "SELECT o.id FROM s2_user_orders o JOIN s2_product p ON o.pid = p.id WHERE o.ts > '2026-01-01' AND (region = 'APAC') AND (owner = 'alice')"
+  },
+  {
+    "name": "nested_subquery_in_from",
+    "user": "alice",
+    "rowPolicies": [
+      {"policyId": "P1", "modelId": 1, "tableBizNames": ["s2_user_orders"], "filterExpression": "region = 'APAC'"}
+    ],
+    "columnPolicies": [],
+    "inputSql": "SELECT t.amount FROM (SELECT user_id, amount FROM s2_user_orders WHERE status = 'PAID') t",
+    "expectedSql": "SELECT t.amount FROM (SELECT user_id, amount FROM s2_user_orders WHERE status = 'PAID' AND (region = 'APAC')) t"
+  },
+  {
+    "name": "union_all_both_branches_filtered",
+    "user": "alice",
+    "rowPolicies": [
+      {"policyId": "P1", "modelId": 1, "tableBizNames": ["s2_user_orders"], "filterExpression": "region = 'APAC'"}
+    ],
+    "columnPolicies": [],
+    "inputSql": "SELECT user_id FROM s2_user_orders WHERE status = 'PAID' UNION ALL SELECT user_id FROM s2_user_orders WHERE status = 'REFUND'",
+    "expectedSql": "SELECT user_id FROM s2_user_orders WHERE status = 'PAID' AND (region = 'APAC') UNION ALL SELECT user_id FROM s2_user_orders WHERE status = 'REFUND' AND (region = 'APAC')"
+  },
+  {
+    "name": "with_cte",
+    "user": "alice",
+    "rowPolicies": [
+      {"policyId": "P1", "modelId": 1, "tableBizNames": ["s2_user_orders"], "filterExpression": "region = 'APAC'"}
+    ],
+    "columnPolicies": [],
+    "inputSql": "WITH paid AS (SELECT user_id FROM s2_user_orders WHERE status = 'PAID') SELECT COUNT(*) FROM paid",
+    "expectedSql": "WITH paid AS (SELECT user_id FROM s2_user_orders WHERE status = 'PAID' AND (region = 'APAC')) SELECT COUNT(*) FROM paid"
+  },
+  {
+    "name": "select_star_with_masking",
+    "user": "alice",
+    "rowPolicies": [],
+    "columnPolicies": [
+      {"policyId": "C1", "modelId": 1, "columnBizName": "phone", "maskTemplate": "CONCAT(LEFT(%s,3),'****')"}
+    ],
+    "inputSql": "SELECT user_id, phone FROM s2_user_orders",
+    "expectedSql": "SELECT user_id, CONCAT(LEFT(phone, 3), '****') AS phone FROM s2_user_orders"
+  },
+  {
+    "name": "column_masking_with_row_filter",
+    "user": "alice",
+    "rowPolicies": [
+      {"policyId": "P1", "modelId": 1, "tableBizNames": ["s2_user_orders"], "filterExpression": "region = 'APAC'"}
+    ],
+    "columnPolicies": [
+      {"policyId": "C1", "modelId": 1, "columnBizName": "phone", "maskTemplate": "CONCAT(LEFT(%s,3),'****')"}
+    ],
+    "inputSql": "SELECT user_id, phone FROM s2_user_orders",
+    "expectedSql": "SELECT user_id, CONCAT(LEFT(phone, 3), '****') AS phone FROM s2_user_orders WHERE (region = 'APAC')"
+  },
+  {
+    "name": "no_policy_passthrough",
+    "user": "alice",
+    "rowPolicies": [],
+    "columnPolicies": [],
+    "inputSql": "SELECT user_id FROM s2_user_orders WHERE status = 'PAID'",
+    "expectedSql": "SELECT user_id FROM s2_user_orders WHERE status = 'PAID'"
+  }
+]

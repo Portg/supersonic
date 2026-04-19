@@ -34,6 +34,6 @@ public class DeprecatedOAuthStorageAliasProcessor implements EnvironmentPostProc
 
         Map<String, Object> aliases = new HashMap<>();
         aliases.put(NEW_KEY, legacy);
-        env.getPropertySources().addFirst(new MapPropertySource(ALIAS_SOURCE, aliases));
+        env.getPropertySources().addLast(new MapPropertySource(ALIAS_SOURCE, aliases));
     }
 }

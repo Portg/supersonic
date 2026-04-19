@@ -100,6 +100,17 @@ public abstract class CacheProviderContractTest {
     }
 
     @Test
+    void incrementCounterResetsAfterTtlWindow() {
+        CacheNamespace ns = CacheNamespace.builder().name("rate-limit").ttl(Duration.ofSeconds(5))
+                .maxSize(100).build();
+        CacheProvider cache = newProvider(ns);
+        assertThat(cache.increment("hits")).isEqualTo(1L);
+        assertThat(cache.increment("hits")).isEqualTo(2L);
+        advanceTime(Duration.ofSeconds(6));
+        assertThat(cache.increment("hits")).isEqualTo(1L); // fixed-window reset
+    }
+
+    @Test
     void entryExpiresAfterTtl() {
         CacheNamespace ns = CacheNamespace.builder().name("short-lived").ttl(Duration.ofSeconds(10))
                 .maxSize(10).build();

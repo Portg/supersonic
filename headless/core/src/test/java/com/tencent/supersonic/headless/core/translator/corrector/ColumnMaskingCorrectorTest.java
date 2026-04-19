@@ -1,0 +1,75 @@
+package com.tencent.supersonic.headless.core.translator.corrector;
+
+import com.tencent.supersonic.common.pojo.User;
+import com.tencent.supersonic.headless.core.translator.corrector.policy.ColumnPolicy;
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class ColumnMaskingCorrectorTest {
+
+    private String norm(String s) {
+        return s.replaceAll("\\s+", " ").trim();
+    }
+
+    private PolicyContext ctx(ColumnPolicy... cps) {
+        PolicyContext c = new PolicyContext();
+        c.setUser(User.get(0L, "alice"));
+        c.setColumnPolicies(List.of(cps));
+        return c;
+    }
+
+    @Test
+    void noPolicies_passthrough() {
+        String in = "SELECT user_id, phone FROM t";
+        assertEquals(norm(in), norm(new ColumnMaskingCorrector().rewrite(in, ctx())));
+    }
+
+    @Test
+    void wrapsPlainColumn() {
+        ColumnPolicy cp = new ColumnPolicy("C1", 1L, "phone", "CONCAT(LEFT(%s,3),'****')");
+        String out = new ColumnMaskingCorrector().rewrite("SELECT user_id, phone FROM t", ctx(cp));
+        assertTrue(norm(out).contains("CONCAT(LEFT(phone, 3), '****') AS phone"));
+    }
+
+    @Test
+    void preservesExistingAliasByReplacingWithMaskedAlias() {
+        ColumnPolicy cp = new ColumnPolicy("C1", 1L, "phone", "CONCAT(LEFT(%s,3),'****')");
+        String out =
+                new ColumnMaskingCorrector().rewrite("SELECT user_id, phone AS p FROM t", ctx(cp));
+        assertTrue(norm(out).contains("CONCAT(LEFT(phone, 3), '****') AS p"));
+    }
+
+    @Test
+    void doesNotWrapNonMaskedColumns() {
+        ColumnPolicy cp = new ColumnPolicy("C1", 1L, "phone", "CONCAT(LEFT(%s,3),'****')");
+        String out = new ColumnMaskingCorrector().rewrite("SELECT user_id FROM t", ctx(cp));
+        assertEquals(norm("SELECT user_id FROM t"), norm(out));
+    }
+
+    @Test
+    void shadowModeSkipsRewrite() {
+        ColumnPolicy cp = new ColumnPolicy("C1", 1L, "phone", "CONCAT(LEFT(%s,3),'****')");
+        PolicyContext c = ctx(cp);
+        c.setShadowMode(true);
+        String in = "SELECT phone FROM t";
+        assertEquals(norm(in), norm(new ColumnMaskingCorrector().rewrite(in, c)));
+    }
+
+    @Test
+    void selectStarIsPassedThroughUntouched() {
+        ColumnPolicy cp = new ColumnPolicy("C1", 1L, "phone", "CONCAT(LEFT(%s,3),'****')");
+        String in = "SELECT * FROM t";
+        assertEquals(norm(in), norm(new ColumnMaskingCorrector().rewrite(in, ctx(cp))));
+    }
+
+    @Test
+    void malformedSqlReturnsOriginal() {
+        ColumnPolicy cp = new ColumnPolicy("C1", 1L, "phone", "CONCAT(LEFT(%s,3),'****')");
+        String broken = "SELECT FROM WHERE";
+        assertEquals(broken, new ColumnMaskingCorrector().rewrite(broken, ctx(cp)));
+    }
+}

@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RowLevelPolicyCorrectorTest {
@@ -80,11 +81,11 @@ class RowLevelPolicyCorrectorTest {
     }
 
     @Test
-    void malformedSqlReturnsOriginalUnchanged() {
+    void malformedSqlFailsClosed() {
         RowPolicy p = new RowPolicy("P", 1L, List.of("t"), "r = 1", null);
         String broken = "SELECT FROM WHERE";
-        String out = new RowLevelPolicyCorrector().rewrite(broken, ctx(p));
-        assertEquals(broken, out);
+        assertThrows(IllegalStateException.class,
+                () -> new RowLevelPolicyCorrector().rewrite(broken, ctx(p)));
     }
 
     @Test
@@ -103,5 +104,12 @@ class RowLevelPolicyCorrectorTest {
         String n = norm(out);
         assertTrue(n.contains("region = 'APAC'"), "first policy missing");
         assertTrue(n.contains("role = 'admin'"), "second policy missing");
+    }
+
+    @Test
+    void wildcardPolicyAppliesToReferencedTable() {
+        RowPolicy p = new RowPolicy("P", 1L, List.of("*"), "region = 'APAC'", null);
+        String out = new RowLevelPolicyCorrector().rewrite("SELECT a FROM products", ctx(p));
+        assertTrue(norm(out).contains("region = 'APAC'"));
     }
 }

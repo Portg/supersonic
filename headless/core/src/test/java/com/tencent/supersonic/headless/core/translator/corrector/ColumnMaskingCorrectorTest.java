@@ -5,8 +5,10 @@ import com.tencent.supersonic.headless.core.translator.corrector.policy.ColumnPo
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ColumnMaskingCorrectorTest {
@@ -60,17 +62,41 @@ class ColumnMaskingCorrectorTest {
     }
 
     @Test
-    void selectStarIsPassedThroughUntouched() {
+    void selectStarFailsClosedWhenMaskingIsActive() {
         ColumnPolicy cp = new ColumnPolicy("C1", 1L, "phone", "CONCAT(LEFT(%s,3),'****')");
-        String in = "SELECT * FROM t";
-        assertEquals(norm(in), norm(new ColumnMaskingCorrector().rewrite(in, ctx(cp))));
+        assertThrows(IllegalStateException.class,
+                () -> new ColumnMaskingCorrector().rewrite("SELECT * FROM t", ctx(cp)));
     }
 
     @Test
-    void malformedSqlReturnsOriginal() {
+    void malformedSqlFailsClosed() {
         ColumnPolicy cp = new ColumnPolicy("C1", 1L, "phone", "CONCAT(LEFT(%s,3),'****')");
         String broken = "SELECT FROM WHERE";
-        assertEquals(broken, new ColumnMaskingCorrector().rewrite(broken, ctx(cp)));
+        assertThrows(IllegalStateException.class,
+                () -> new ColumnMaskingCorrector().rewrite(broken, ctx(cp)));
+    }
+
+    @Test
+    void malformedMaskTemplateFailsClosed() {
+        ColumnPolicy cp = new ColumnPolicy("C1", 1L, "phone", "CONCAT(LEFT(%s,3),%s)");
+        assertThrows(IllegalStateException.class,
+                () -> new ColumnMaskingCorrector().rewrite("SELECT phone FROM t", ctx(cp)));
+    }
+
+    @Test
+    void multiModelMaskingFailsClosedWithoutScopedPolicies() {
+        ColumnPolicy cp = new ColumnPolicy("C1", 1L, "phone", "CONCAT(LEFT(%s,3),'****')");
+        PolicyContext c = ctx(cp);
+        c.setModelIds(Set.of(1L, 2L));
+        assertThrows(IllegalStateException.class,
+                () -> new ColumnMaskingCorrector().rewrite("SELECT phone FROM t", c));
+    }
+
+    @Test
+    void sensitiveAliasExpressionFailsClosed() {
+        ColumnPolicy cp = new ColumnPolicy("C1", 1L, "phone", "CONCAT(LEFT(%s,3),'****')");
+        assertThrows(IllegalStateException.class, () -> new ColumnMaskingCorrector()
+                .rewrite("SELECT COALESCE(phone, '') AS phone FROM t", ctx(cp)));
     }
 
     @Test

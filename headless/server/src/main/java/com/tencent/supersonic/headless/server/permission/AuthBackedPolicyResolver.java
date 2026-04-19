@@ -16,6 +16,7 @@ import com.tencent.supersonic.headless.api.service.SchemaService;
 import com.tencent.supersonic.headless.core.translator.corrector.policy.ColumnPolicy;
 import com.tencent.supersonic.headless.core.translator.corrector.policy.PolicyResolver;
 import com.tencent.supersonic.headless.core.translator.corrector.policy.RowPolicy;
+import com.tencent.supersonic.headless.server.service.DataSetAuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -37,12 +38,18 @@ public class AuthBackedPolicyResolver implements PolicyResolver {
     private final AuthService authService;
     private final SchemaService schemaService;
     private final SensitiveLevelConfig sensitiveLevelConfig;
+    private final DataSetAuthService dataSetAuthService;
 
     @Override
-    public List<RowPolicy> resolveRowPolicies(User user, Set<Long> modelIds) {
-        AuthorizedResourceResp auth = fetchAuth(user, modelIds);
-        if (auth == null || CollectionUtils.isEmpty(auth.getFilters())) {
+    public List<RowPolicy> resolveRowPolicies(User user, Set<Long> modelIds, Long dataSetId) {
+        AuthorizedResourceResp auth = fetchAuth(user, modelIds, dataSetId);
+        if (CollectionUtils.isEmpty(auth.getFilters())) {
             return List.of();
+        }
+        List<String> tableBizNames = allTableBizNames(modelIds);
+        if (tableBizNames.isEmpty()) {
+            throw new IllegalStateException(
+                    "failed to resolve policy table names for models=" + modelIds);
         }
         List<RowPolicy> result = new ArrayList<>();
         for (DimensionFilter f : auth.getFilters()) {
@@ -56,7 +63,7 @@ public class AuthBackedPolicyResolver implements PolicyResolver {
                 RowPolicy p = new RowPolicy();
                 p.setPolicyId("row-" + UUID.nameUUIDFromBytes(expr.getBytes()));
                 p.setModelId(modelIds.iterator().next());
-                p.setTableBizNames(allTableBizNames(modelIds));
+                p.setTableBizNames(tableBizNames);
                 p.setFilterExpression(expr);
                 p.setDescription(f.getDescription());
                 result.add(p);
@@ -66,15 +73,14 @@ public class AuthBackedPolicyResolver implements PolicyResolver {
     }
 
     @Override
-    public List<ColumnPolicy> resolveColumnPolicies(User user, Set<Long> modelIds) {
+    public List<ColumnPolicy> resolveColumnPolicies(User user, Set<Long> modelIds, Long dataSetId) {
         SemanticSchemaResp schema = fetchSchema(modelIds);
         if (schema == null) {
-            return List.of();
+            throw new IllegalStateException("failed to resolve semantic schema for policies");
         }
         boolean includeMid = sensitiveLevelConfig.isMidLevelRequireAuth();
-        AuthorizedResourceResp auth = fetchAuth(user, modelIds);
-        Set<String> authedCols = auth == null || CollectionUtils.isEmpty(auth.getAuthResList())
-                ? Set.of()
+        AuthorizedResourceResp auth = fetchAuth(user, modelIds, dataSetId);
+        Set<String> authedCols = CollectionUtils.isEmpty(auth.getAuthResList()) ? Set.of()
                 : auth.getAuthResList().stream().map(AuthRes::getName).collect(Collectors.toSet());
 
         List<ColumnPolicy> out = new ArrayList<>();
@@ -108,14 +114,28 @@ public class AuthBackedPolicyResolver implements PolicyResolver {
         return includeMid && SensitiveLevelEnum.MID.getCode().equals(level);
     }
 
-    private AuthorizedResourceResp fetchAuth(User user, Set<Long> modelIds) {
+    private AuthorizedResourceResp fetchAuth(User user, Set<Long> modelIds, Long dataSetId) {
         try {
             QueryAuthResReq req = new QueryAuthResReq();
             req.setModelIds(new ArrayList<>(modelIds));
-            return authService.queryAuthorizedResources(req, user);
+            AuthorizedResourceResp authorizedResource =
+                    authService.queryAuthorizedResources(req, user);
+            if (authorizedResource == null) {
+                authorizedResource = new AuthorizedResourceResp();
+            }
+            AuthorizedResourceResp merged = new AuthorizedResourceResp();
+            mergeAuthorizedResource(merged, authorizedResource);
+            if (dataSetId != null) {
+                AuthorizedResourceResp dataSetAuthResource =
+                        dataSetAuthService.queryAuthorizedResources(dataSetId, user);
+                if (dataSetAuthResource != null) {
+                    mergeAuthorizedResource(merged, dataSetAuthResource);
+                }
+            }
+            return merged;
         } catch (Exception e) {
             log.warn("auth fetch failed for user={} models={}", user.getName(), modelIds, e);
-            return null;
+            throw new IllegalStateException("failed to resolve authorization policies", e);
         }
     }
 
@@ -126,7 +146,17 @@ public class AuthBackedPolicyResolver implements PolicyResolver {
             return schemaService.fetchSemanticSchema(f);
         } catch (Exception e) {
             log.warn("schema fetch failed for models={}", modelIds, e);
-            return null;
+            throw new IllegalStateException("failed to resolve semantic schema for policies", e);
+        }
+    }
+
+    private void mergeAuthorizedResource(AuthorizedResourceResp target,
+            AuthorizedResourceResp source) {
+        if (!CollectionUtils.isEmpty(source.getAuthResList())) {
+            target.getAuthResList().addAll(source.getAuthResList());
+        }
+        if (!CollectionUtils.isEmpty(source.getFilters())) {
+            target.getFilters().addAll(source.getFilters());
         }
     }
 
@@ -135,8 +165,23 @@ public class AuthBackedPolicyResolver implements PolicyResolver {
         if (schema == null || schema.getModelResps() == null) {
             return List.of();
         }
-        return schema.getModelResps().stream()
-                .map(m -> m.getBizName() == null ? m.getName() : m.getBizName())
-                .filter(s -> s != null && !s.isBlank()).collect(Collectors.toList());
+        return schema.getModelResps().stream().flatMap(m -> {
+            List<String> names = new ArrayList<>();
+            names.add(m.getBizName());
+            // m.getAlias() is a comma-separated string of SQL aliases, not a single identifier
+            if (m.getAlias() != null) {
+                for (String a : m.getAlias().split(",")) {
+                    names.add(a.trim());
+                }
+            }
+            // fullPath format: "db.schema.table" — include full path and leaf name only
+            if (m.getFullPath() != null) {
+                names.add(m.getFullPath());
+                if (m.getFullPath().contains(".")) {
+                    names.add(m.getFullPath().substring(m.getFullPath().lastIndexOf('.') + 1));
+                }
+            }
+            return names.stream();
+        }).filter(s -> s != null && !s.isBlank()).distinct().collect(Collectors.toList());
     }
 }

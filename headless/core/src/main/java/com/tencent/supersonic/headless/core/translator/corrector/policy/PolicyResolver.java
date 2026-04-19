@@ -7,7 +7,7 @@ import java.util.Set;
 
 public interface PolicyResolver {
 
-    List<RowPolicy> resolveRowPolicies(User user, Set<Long> modelIds);
+    List<RowPolicy> resolveRowPolicies(User user, Set<Long> modelIds, Long dataSetId);
 
-    List<ColumnPolicy> resolveColumnPolicies(User user, Set<Long> modelIds);
+    List<ColumnPolicy> resolveColumnPolicies(User user, Set<Long> modelIds, Long dataSetId);
 }

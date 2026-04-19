@@ -138,9 +138,7 @@ public class S2SemanticLayerService implements SemanticLayerService {
             // 3 translate query
             QueryStatement queryStatement = buildQueryStatement(queryReq, user);
             populatePolicyContext(queryStatement, queryReq, user);
-            if (!queryStatement.isTranslated()) {
-                semanticTranslator.translate(queryStatement);
-            }
+            semanticTranslator.translate(queryStatement);
 
             // Check whether the dimensions of the metric drill-down are correct temporarily,
             // add the abstraction of a validator later.
@@ -317,7 +315,8 @@ public class S2SemanticLayerService implements SemanticLayerService {
 
     private void populatePolicyContext(QueryStatement queryStatement, SemanticQueryReq queryReq,
             User user) {
-        if (queryStatement.getPolicyContext() != null || user == null) {
+        if (queryStatement.getPolicyContext() != null || user == null
+                || !correctorProperties.isEnabled() || !queryReq.isNeedAuth()) {
             return;
         }
         Set<Long> modelIds = queryReq.getModelIdSet();
@@ -335,9 +334,24 @@ public class S2SemanticLayerService implements SemanticLayerService {
         ctx.setUser(user);
         ctx.setModelIds(modelIds);
         ctx.setDataSetId(queryReq.getDataSetId());
-        ctx.setRowPolicies(policyResolver.resolveRowPolicies(user, modelIds));
-        ctx.setColumnPolicies(policyResolver.resolveColumnPolicies(user, modelIds));
         ctx.setShadowMode(correctorProperties.isShadowMode());
+        ctx.setAuditLogEnabled(correctorProperties.isAuditLogEnabled());
+        try {
+            ctx.setRowPolicies(
+                    policyResolver.resolveRowPolicies(user, modelIds, queryReq.getDataSetId()));
+            ctx.setColumnPolicies(
+                    policyResolver.resolveColumnPolicies(user, modelIds, queryReq.getDataSetId()));
+        } catch (Exception e) {
+            if (correctorProperties.isShadowMode()) {
+                // In shadow mode the corrector must never block production queries.
+                // Log the failure and skip policy context so correctors are bypassed.
+                log.error(
+                        "policy resolution failed in shadow mode; skipping PolicyContext for user={} models={}",
+                        user.getName(), modelIds, e);
+                return;
+            }
+            throw e;
+        }
         queryStatement.setPolicyContext(ctx);
     }
 

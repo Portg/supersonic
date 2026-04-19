@@ -22,6 +22,7 @@ import net.sf.jsqlparser.statement.select.WithItem;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -46,6 +47,10 @@ public class ColumnMaskingCorrector implements PhysicalSqlCorrector {
 
         if (colToMask.isEmpty())
             return sql;
+        if (ctx.getModelIds() != null && ctx.getModelIds().size() > 1) {
+            throw new IllegalStateException(
+                    "column masking across multiple models requires scoped policies");
+        }
 
         try {
             Statement stmt = CCJSqlParserUtil.parse(sql);
@@ -55,9 +60,8 @@ public class ColumnMaskingCorrector implements PhysicalSqlCorrector {
             walk(select, colToMask, modified, ctx);
             return modified[0] ? stmt.toString() : sql;
         } catch (JSQLParserException e) {
-            log.warn("ColumnMaskingCorrector parse failed; returning unchanged. err={}",
-                    e.getMessage());
-            return sql;
+            log.warn("ColumnMaskingCorrector parse failed. err={}", e.getMessage());
+            throw new IllegalStateException("failed to parse SQL for column masking", e);
         }
     }
 
@@ -89,19 +93,22 @@ public class ColumnMaskingCorrector implements PhysicalSqlCorrector {
         for (int i = 0; i < items.size(); i++) {
             SelectItem<?> si = items.get(i);
             Expression expr = si.getExpression();
-            // SELECT * cannot be surgically masked without schema — skip
-            if (expr instanceof AllColumns || expr instanceof AllTableColumns)
+            if (expr instanceof AllColumns || expr instanceof AllTableColumns) {
+                throw new IllegalStateException(
+                        "SELECT * is not allowed when column masking policies are active");
+            }
+            if (!(expr instanceof Column col)) {
+                failIfSensitiveAlias(si, colToMask.keySet());
                 continue;
-            if (!(expr instanceof Column col))
-                continue;
+            }
             String name = col.getColumnName();
             if (name == null)
                 continue;
             String mask = colToMask.get(name.toLowerCase(Locale.ROOT));
             if (mask == null)
                 continue;
-            String rendered = String.format(mask, col.toString());
             try {
+                String rendered = String.format(mask, col.toString());
                 Expression newExpr = CCJSqlParserUtil.parseExpression(rendered);
                 Alias existingAlias = si.getAlias();
                 Alias alias = existingAlias != null ? existingAlias : new Alias(name);
@@ -109,12 +116,29 @@ public class ColumnMaskingCorrector implements PhysicalSqlCorrector {
                 replaced.setAlias(alias);
                 items.set(i, replaced);
                 modified[0] = true;
-                String userName = ctx.getUser() != null ? ctx.getUser().getName() : "unknown";
-                auditLogger.log(new PolicyAuditEntry("col-" + name, userName, "column", null, null,
-                        PolicyAuditLogger.digest(ps.toString())));
+                if (ctx.isAuditLogEnabled()) {
+                    String userName = ctx.getUser() != null ? ctx.getUser().getName() : "unknown";
+                    auditLogger.log(new PolicyAuditEntry("col-" + name, userName, "column", null,
+                            null, PolicyAuditLogger.digest(ps.toString())));
+                }
             } catch (JSQLParserException e) {
+                log.warn("Failed to parse mask template '{}' for column '{}'", mask, name);
+                throw new IllegalStateException("failed to parse column mask expression", e);
+            } catch (RuntimeException e) {
                 log.warn("Failed to render mask template '{}' for column '{}'", mask, name);
+                throw new IllegalStateException("failed to render column mask expression", e);
             }
+        }
+    }
+
+    private void failIfSensitiveAlias(SelectItem<?> si, Set<String> maskedColumns) {
+        if (si.getAlias() == null || si.getAlias().getName() == null) {
+            return;
+        }
+        String alias = si.getAlias().getName().toLowerCase(Locale.ROOT);
+        if (maskedColumns.contains(alias)) {
+            throw new IllegalStateException(
+                    "expression projection cannot safely mask sensitive column alias: " + alias);
         }
     }
 }

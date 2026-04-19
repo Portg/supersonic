@@ -441,11 +441,9 @@ public class S2DataPermissionAspect {
      * Simulates what RowLevelPolicyCorrector would produce for the given SQL and authorized
      * resource. Used in shadow mode to compare old-aspect output vs. new corrector output.
      *
-     * NOTE: tableBizNames is left empty intentionally — RowLevelPolicyCorrector only injects when a
-     * policy's tableBizNames matches a referenced table. In shadow mode we pass empty lists so the
-     * corrector skips injection, making the simulated result equal to the original SQL. Diffs
-     * logged here therefore reflect cases where the corrector's table-matching logic diverges from
-     * the aspect's blanket OR-injection approach.
+     * The old aspect applies row filters without table scoping. Use the corrector's wildcard table
+     * marker so shadow comparison validates rewrite parity instead of comparing against the
+     * unchanged original SQL.
      */
     static String simulateNewCorrector(String originalSql, AuthorizedResourceResp auth) {
         if (auth == null || CollectionUtils.isEmpty(auth.getFilters()))
@@ -458,7 +456,7 @@ public class S2DataPermissionAspect {
                     RowPolicy p = new RowPolicy();
                     p.setPolicyId("shadow");
                     p.setFilterExpression(expr);
-                    p.setTableBizNames(List.of());
+                    p.setTableBizNames(List.of("*"));
                     return p;
                 }).collect(Collectors.toList());
         ctx.setRowPolicies(rowPolicies);

@@ -26,6 +26,7 @@ public class DefaultSemanticTranslator implements SemanticTranslator {
 
     public void translate(QueryStatement queryStatement) throws Exception {
         if (queryStatement.isTranslated()) {
+            applyPhysicalSqlCorrectors(queryStatement);
             return;
         }
         for (QueryParser parser : ComponentFactory.getQueryParsers()) {
@@ -38,7 +39,6 @@ public class DefaultSemanticTranslator implements SemanticTranslator {
             }
         }
         mergeOntologyQuery(queryStatement);
-        applyPhysicalSqlCorrectors(queryStatement);
 
         if (StringUtils.isNotBlank(queryStatement.getSqlQuery().getSimplifiedSql())) {
             queryStatement.setSql(queryStatement.getSqlQuery().getSimplifiedSql());
@@ -52,11 +52,12 @@ public class DefaultSemanticTranslator implements SemanticTranslator {
                 optimizer.rewrite(queryStatement);
             }
         }
+        applyPhysicalSqlCorrectors(queryStatement);
         log.debug("translated query SQL: [{}]",
                 StringUtils.normalizeSpace(queryStatement.getSql()));
     }
 
-    private void applyPhysicalSqlCorrectors(QueryStatement queryStatement) {
+    private void applyPhysicalSqlCorrectors(QueryStatement queryStatement) throws Exception {
         com.tencent.supersonic.headless.core.translator.corrector.PolicyContext ctx =
                 queryStatement.getPolicyContext();
         if (ctx == null)
@@ -68,6 +69,7 @@ public class DefaultSemanticTranslator implements SemanticTranslator {
                 sql = c.rewrite(sql, ctx);
             } catch (Exception e) {
                 log.error("PhysicalSqlCorrector {} failed", c.getClass().getSimpleName(), e);
+                throw e;
             }
         }
         queryStatement.setSql(sql);

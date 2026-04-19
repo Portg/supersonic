@@ -21,4 +21,5 @@ public class PolicyContext {
     private List<ColumnPolicy> columnPolicies = new ArrayList<>();
     /** If true, do not rewrite; only compute what would change (shadow mode). */
     private boolean shadowMode;
+    private boolean auditLogEnabled = true;
 }

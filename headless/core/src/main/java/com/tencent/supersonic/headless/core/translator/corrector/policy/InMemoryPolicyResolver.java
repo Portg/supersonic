@@ -23,14 +23,14 @@ public class InMemoryPolicyResolver implements PolicyResolver {
     }
 
     @Override
-    public List<RowPolicy> resolveRowPolicies(User user, Set<Long> modelIds) {
+    public List<RowPolicy> resolveRowPolicies(User user, Set<Long> modelIds, Long dataSetId) {
         return rowByUser.getOrDefault(user.getName(), List.of()).stream().filter(
                 p -> modelIds == null || modelIds.isEmpty() || modelIds.contains(p.getModelId()))
                 .toList();
     }
 
     @Override
-    public List<ColumnPolicy> resolveColumnPolicies(User user, Set<Long> modelIds) {
+    public List<ColumnPolicy> resolveColumnPolicies(User user, Set<Long> modelIds, Long dataSetId) {
         return colByUser.getOrDefault(user.getName(), List.of()).stream().filter(
                 p -> modelIds == null || modelIds.isEmpty() || modelIds.contains(p.getModelId()))
                 .toList();

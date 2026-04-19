@@ -46,9 +46,9 @@ public class RowLevelPolicyCorrector implements PhysicalSqlCorrector {
             }
             return sql;
         } catch (JSQLParserException e) {
-            log.warn("RowLevelPolicyCorrector parse failed; returning SQL unchanged. err={}",
-                    e.getMessage());
-            return sql;
+            log.warn("RowLevelPolicyCorrector parse failed. err={}", e.getMessage());
+            throw new IllegalStateException("failed to parse SQL for row-level policy injection",
+                    e);
         }
     }
 
@@ -81,19 +81,17 @@ public class RowLevelPolicyCorrector implements PhysicalSqlCorrector {
             }
         }
 
-        List<String> refs = referencedTableNames(ps).stream().map(t -> t.toLowerCase(Locale.ROOT))
-                .distinct().toList();
+        List<String> refs = referencedTableNames(ps).stream()
+                .map(RowLevelPolicyCorrector::normalize).distinct().toList();
 
         for (RowPolicy p : ctx.getRowPolicies()) {
             if (p == null || p.getTableBizNames() == null || p.getFilterExpression() == null)
                 continue;
-            boolean match = p.getTableBizNames().stream().map(t -> t.toLowerCase(Locale.ROOT))
-                    .anyMatch(refs::contains);
+            boolean match = p.getTableBizNames().stream().map(RowLevelPolicyCorrector::normalize)
+                    .anyMatch(t -> "*".equals(t) || refs.contains(t));
             if (!match)
                 continue;
             Expression cond = parseCondSafe(p.getFilterExpression());
-            if (cond == null)
-                continue;
             Expression wrapped = new Parenthesis(cond);
             if (ps.getWhere() == null) {
                 ps.setWhere(wrapped);
@@ -101,9 +99,11 @@ public class RowLevelPolicyCorrector implements PhysicalSqlCorrector {
                 ps.setWhere(new AndExpression(ps.getWhere(), wrapped));
             }
             modified[0] = true;
-            String userName = ctx.getUser() != null ? ctx.getUser().getName() : "unknown";
-            auditLogger.log(new PolicyAuditEntry(p.getPolicyId(), userName, "row", null, null,
-                    PolicyAuditLogger.digest(ps.toString())));
+            if (ctx.isAuditLogEnabled()) {
+                String userName = ctx.getUser() != null ? ctx.getUser().getName() : "unknown";
+                auditLogger.log(new PolicyAuditEntry(p.getPolicyId(), userName, "row", null, null,
+                        PolicyAuditLogger.digest(ps.toString())));
+            }
         }
     }
 
@@ -124,8 +124,17 @@ public class RowLevelPolicyCorrector implements PhysicalSqlCorrector {
         try {
             return CCJSqlParserUtil.parseCondExpression(expr);
         } catch (JSQLParserException e) {
-            log.warn("Failed to parse policy expression '{}' — skipping", expr);
-            return null;
+            log.warn("Failed to parse policy expression '{}'", expr);
+            throw new IllegalStateException("failed to parse row-level policy expression", e);
         }
+    }
+
+    private static String normalize(String name) {
+        if (name == null) {
+            return "";
+        }
+        String normalized = name.replace("`", "").replace("\"", "").toLowerCase(Locale.ROOT);
+        int dot = normalized.lastIndexOf('.');
+        return dot >= 0 ? normalized.substring(dot + 1) : normalized;
     }
 }

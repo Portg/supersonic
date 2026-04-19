@@ -14,7 +14,7 @@ class InMemoryPolicyResolverTest {
     @Test
     void returnsEmptyWhenNoFixtureRegistered() {
         InMemoryPolicyResolver resolver = new InMemoryPolicyResolver();
-        List<RowPolicy> rows = resolver.resolveRowPolicies(User.get(0L, "alice"), Set.of(1L));
+        List<RowPolicy> rows = resolver.resolveRowPolicies(User.get(0L, "alice"), Set.of(1L), null);
         assertTrue(rows.isEmpty());
     }
 
@@ -25,7 +25,7 @@ class InMemoryPolicyResolverTest {
                 new RowPolicy("P1", 1L, List.of("s2_user_orders"), "region = 'APAC'", "APAC only");
         resolver.register("alice", p);
 
-        List<RowPolicy> rows = resolver.resolveRowPolicies(User.get(0L, "alice"), Set.of(1L));
+        List<RowPolicy> rows = resolver.resolveRowPolicies(User.get(0L, "alice"), Set.of(1L), null);
         assertEquals(1, rows.size());
         assertEquals("P1", rows.get(0).getPolicyId());
     }
@@ -36,7 +36,7 @@ class InMemoryPolicyResolverTest {
         resolver.register("alice", new RowPolicy("P1", 1L, List.of("t1"), "x=1", null));
         resolver.register("alice", new RowPolicy("P2", 2L, List.of("t2"), "y=2", null));
 
-        List<RowPolicy> rows = resolver.resolveRowPolicies(User.get(0L, "alice"), Set.of(1L));
+        List<RowPolicy> rows = resolver.resolveRowPolicies(User.get(0L, "alice"), Set.of(1L), null);
         assertEquals(1, rows.size());
         assertEquals("P1", rows.get(0).getPolicyId());
     }
@@ -44,7 +44,8 @@ class InMemoryPolicyResolverTest {
     @Test
     void returnsEmptyColumnPoliciesWhenNoFixtureRegistered() {
         InMemoryPolicyResolver resolver = new InMemoryPolicyResolver();
-        List<ColumnPolicy> cols = resolver.resolveColumnPolicies(User.get(0L, "alice"), Set.of(1L));
+        List<ColumnPolicy> cols =
+                resolver.resolveColumnPolicies(User.get(0L, "alice"), Set.of(1L), null);
         assertTrue(cols.isEmpty());
     }
 
@@ -54,7 +55,8 @@ class InMemoryPolicyResolverTest {
         ColumnPolicy p = new ColumnPolicy("CP1", 1L, "phone", "CONCAT(LEFT(%s,3),'****')");
         resolver.register("alice", p);
 
-        List<ColumnPolicy> cols = resolver.resolveColumnPolicies(User.get(0L, "alice"), Set.of(1L));
+        List<ColumnPolicy> cols =
+                resolver.resolveColumnPolicies(User.get(0L, "alice"), Set.of(1L), null);
         assertEquals(1, cols.size());
         assertEquals("CP1", cols.get(0).getPolicyId());
     }
@@ -67,7 +69,8 @@ class InMemoryPolicyResolverTest {
         resolver.register("alice",
                 new ColumnPolicy("CP2", 2L, "email", "CONCAT(LEFT(%s,3),'****')"));
 
-        List<ColumnPolicy> cols = resolver.resolveColumnPolicies(User.get(0L, "alice"), Set.of(1L));
+        List<ColumnPolicy> cols =
+                resolver.resolveColumnPolicies(User.get(0L, "alice"), Set.of(1L), null);
         assertEquals(1, cols.size());
         assertEquals("CP1", cols.get(0).getPolicyId());
     }

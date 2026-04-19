@@ -55,6 +55,14 @@ import java.util.Set;
 import java.util.StringJoiner;
 import java.util.stream.Collectors;
 
+/**
+ * @deprecated Replaced by the
+ *             {@link com.tencent.supersonic.headless.core.translator.corrector.PhysicalSqlCorrector}
+ *             chain (RowLevelPolicyCorrector + ColumnMaskingCorrector). Kept in shadow mode for one
+ *             release to catch gaps. Remove once shadow-diff logs report zero discrepancies for 30
+ *             days. Tracking: docs/details/platform/permission-corrector-migration.md
+ */
+@Deprecated(since = "2026-04-17", forRemoval = true)
 @Component
 @Aspect
 @Slf4j

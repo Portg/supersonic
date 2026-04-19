@@ -72,4 +72,30 @@ class ColumnMaskingCorrectorTest {
         String broken = "SELECT FROM WHERE";
         assertEquals(broken, new ColumnMaskingCorrector().rewrite(broken, ctx(cp)));
     }
+
+    @Test
+    void unionAllMasksBothBranches() {
+        ColumnPolicy cp = new ColumnPolicy("C1", 1L, "phone", "CONCAT(LEFT(%s,3),'****')");
+        String out = new ColumnMaskingCorrector().rewrite(
+                "SELECT user_id, phone FROM t1 UNION ALL SELECT user_id, phone FROM t2", ctx(cp));
+        long count = norm(out).split("CONCAT", -1).length - 1;
+        assertEquals(2, count, "phone should be masked in both UNION branches");
+    }
+
+    @Test
+    void cteMasksColumnInsideCte() {
+        ColumnPolicy cp = new ColumnPolicy("C1", 1L, "phone", "CONCAT(LEFT(%s,3),'****')");
+        String out = new ColumnMaskingCorrector().rewrite(
+                "WITH cte AS (SELECT user_id, phone FROM t) SELECT user_id, phone FROM cte",
+                ctx(cp));
+        assertTrue(norm(out).contains("CONCAT"), "phone inside CTE should be masked");
+    }
+
+    @Test
+    void parenthesedSubqueryMasksColumn() {
+        ColumnPolicy cp = new ColumnPolicy("C1", 1L, "phone", "CONCAT(LEFT(%s,3),'****')");
+        String out = new ColumnMaskingCorrector()
+                .rewrite("SELECT u.phone FROM (SELECT user_id, phone FROM t) u", ctx(cp));
+        assertTrue(norm(out).contains("CONCAT"), "phone in subquery should be masked");
+    }
 }

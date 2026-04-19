@@ -2,8 +2,8 @@ package com.tencent.supersonic.feishu.server.handler;
 
 import com.tencent.supersonic.chat.api.pojo.response.QueryResult;
 import com.tencent.supersonic.common.pojo.User;
-import com.tencent.supersonic.feishu.api.cache.FeishuCacheService;
 import com.tencent.supersonic.feishu.api.pojo.FeishuMessage;
+import com.tencent.supersonic.feishu.server.cache.FeishuCacheFacade;
 import com.tencent.supersonic.feishu.server.persistence.dataobject.FeishuQuerySessionDO;
 import com.tencent.supersonic.feishu.server.persistence.mapper.FeishuQuerySessionMapper;
 import com.tencent.supersonic.feishu.server.render.FeishuCardRenderer;
@@ -29,7 +29,7 @@ public class QueryMessageHandler implements MessageHandler {
     private final FeishuCardRenderer cardRenderer;
     private final FeishuMessageSender messageSender;
     private final FeishuQuerySessionMapper sessionMapper;
-    private final FeishuCacheService cacheService;
+    private final FeishuCacheFacade cacheService;
 
     @Override
     public void handle(FeishuMessage msg, User user) {

@@ -17,6 +17,7 @@
 | [01-datasync-connection.md](platform/01-datasync-connection.md) | Connection 生命周期、数据同步执行、Catalog 发现、通用 HTTP 连接器 | 已有设计 |
 | [02-rbac-tenant.md](platform/02-rbac-tenant.md) | 多租户模型、PLATFORM/TENANT 双作用域角色、行级/字段级权限、动作型工具治理 | 已实现（部分扩展待开发）|
 | [03-monitoring-alerts.md](platform/03-monitoring-alerts.md) | Prometheus 指标、Grafana 仪表盘、SLO 告警规则（5 条 P0）、Alertmanager 路由 | 已上线（部分指标待补全）|
+| [cache-abstraction.md](platform/cache-abstraction.md) | Unified cache SPI (Caffeine/Redis) with per-namespace config | 已上线 |
 
 参考文档：
 - [platform-tenant-rbac-migration.md](../platform-tenant-rbac-migration.md) — RBAC 拆分迁移变更记录（前后端文件清单、API 清单、Bug 修复）

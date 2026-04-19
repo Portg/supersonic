@@ -1,3 +1,7 @@
 # FileStorage auto-configuration
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
 com.tencent.supersonic.common.storage.FileStorageAutoConfiguration
+
+# Deprecated property alias processors
+org.springframework.boot.env.EnvironmentPostProcessor=\
+  com.tencent.supersonic.common.cache.DeprecatedOAuthStorageAliasProcessor

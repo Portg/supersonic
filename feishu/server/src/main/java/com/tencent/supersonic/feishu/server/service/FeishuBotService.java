@@ -3,9 +3,9 @@ package com.tencent.supersonic.feishu.server.service;
 import com.tencent.supersonic.common.config.TenantConfig;
 import com.tencent.supersonic.common.context.TenantContext;
 import com.tencent.supersonic.common.pojo.User;
-import com.tencent.supersonic.feishu.api.cache.FeishuCacheService;
 import com.tencent.supersonic.feishu.api.config.FeishuProperties;
 import com.tencent.supersonic.feishu.api.pojo.FeishuMessage;
+import com.tencent.supersonic.feishu.server.cache.FeishuCacheFacade;
 import com.tencent.supersonic.feishu.server.handler.CardActionHandler;
 import com.tencent.supersonic.feishu.server.handler.FeishuMessageRouter;
 import com.tencent.supersonic.feishu.server.handler.MessageHandler;
@@ -35,7 +35,7 @@ public class FeishuBotService {
     private final FeishuMessageSender messageSender;
     private final FeishuCardRenderer cardRenderer;
     private final FeishuProperties properties;
-    private final FeishuCacheService cacheService;
+    private final FeishuCacheFacade cacheService;
     private final ThreadPoolTaskExecutor feishuExecutor;
     private final FeishuMeterBinder meterBinder;
     private final FeishuBindTokenService bindTokenService;
@@ -44,7 +44,7 @@ public class FeishuBotService {
 
     public FeishuBotService(FeishuMessageRouter router, FeishuUserMappingService userMappingService,
             FeishuMessageSender messageSender, FeishuCardRenderer cardRenderer,
-            FeishuProperties properties, FeishuCacheService cacheService,
+            FeishuProperties properties, FeishuCacheFacade cacheService,
             @Qualifier("feishuExecutor") ThreadPoolTaskExecutor feishuExecutor,
             FeishuMeterBinder meterBinder, FeishuBindTokenService bindTokenService,
             CardActionHandler cardActionHandler, TenantConfig tenantConfig) {

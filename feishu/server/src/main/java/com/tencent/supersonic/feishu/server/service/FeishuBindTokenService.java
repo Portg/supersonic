@@ -4,8 +4,8 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
 import com.alibaba.fastjson.JSON;
-import com.tencent.supersonic.feishu.api.cache.FeishuCacheService;
 import com.tencent.supersonic.feishu.api.config.FeishuProperties;
+import com.tencent.supersonic.feishu.server.cache.FeishuCacheFacade;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,7 +26,7 @@ public class FeishuBindTokenService {
     private static final String USED_PREFIX = "bind:used:";
 
     private final FeishuProperties properties;
-    private final FeishuCacheService cacheService;
+    private final FeishuCacheFacade cacheService;
 
     @Data
     public static class BindTokenPayload {

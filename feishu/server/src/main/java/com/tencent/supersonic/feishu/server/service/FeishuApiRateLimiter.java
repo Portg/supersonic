@@ -1,8 +1,8 @@
 package com.tencent.supersonic.feishu.server.service;
 
-import com.tencent.supersonic.feishu.api.cache.FeishuCacheService;
 import com.tencent.supersonic.feishu.api.config.FeishuProperties;
 import com.tencent.supersonic.feishu.api.config.FeishuProperties.RateLimitConfig;
+import com.tencent.supersonic.feishu.server.cache.FeishuCacheFacade;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -20,7 +20,7 @@ public class FeishuApiRateLimiter {
         MESSAGE, CONTACT
     }
 
-    private final FeishuCacheService cacheService;
+    private final FeishuCacheFacade cacheService;
     private final FeishuProperties properties;
 
     /**

@@ -1,1 +1,2 @@
 com.tencent.supersonic.common.storage.FileStorageAutoConfiguration
+com.tencent.supersonic.common.cache.UnifiedCacheAutoConfiguration

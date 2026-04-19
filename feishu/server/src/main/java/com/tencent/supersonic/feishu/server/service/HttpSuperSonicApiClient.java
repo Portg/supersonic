@@ -6,8 +6,8 @@ import com.tencent.supersonic.chat.api.pojo.response.ChatParseResp;
 import com.tencent.supersonic.chat.api.pojo.response.QueryResult;
 import com.tencent.supersonic.common.pojo.ResultData;
 import com.tencent.supersonic.common.pojo.User;
-import com.tencent.supersonic.feishu.api.cache.FeishuCacheService;
 import com.tencent.supersonic.feishu.api.config.FeishuProperties;
+import com.tencent.supersonic.feishu.server.cache.FeishuCacheFacade;
 import com.tencent.supersonic.headless.api.pojo.request.QuerySqlReq;
 import com.tencent.supersonic.headless.api.pojo.response.SemanticQueryResp;
 import lombok.extern.slf4j.Slf4j;
@@ -43,10 +43,10 @@ public class HttpSuperSonicApiClient implements SuperSonicApiClient {
     private final InternalTokenGenerator tokenGenerator;
     private final FeishuProperties properties;
     private final RestTemplate restTemplate;
-    private final FeishuCacheService cacheService;
+    private final FeishuCacheFacade cacheService;
 
     public HttpSuperSonicApiClient(InternalTokenGenerator tokenGenerator,
-            FeishuProperties properties, FeishuCacheService cacheService) {
+            FeishuProperties properties, FeishuCacheFacade cacheService) {
         this.tokenGenerator = tokenGenerator;
         this.properties = properties;
         this.cacheService = cacheService;

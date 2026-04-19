@@ -136,7 +136,20 @@ knife4j:
 
 # SuperSonic configuration
 s2:
-  # OAuth storage configuration (redis or caffeine, default: caffeine)
+  # Unified cache configuration. type = global default backend (caffeine or redis).
+  # Per-namespace overrides: s2.cache.namespaces.<name>.{type,ttl,max-size,tenant-scoped}
+  cache:
+    type: ${S2_CACHE_TYPE:redis}
+    namespaces:
+      feishu-token:
+        type: ${FEISHU_CACHE_TYPE:redis}
+      feishu-event-dedup:
+        type: ${FEISHU_CACHE_TYPE:redis}
+      feishu-general:
+        type: ${FEISHU_CACHE_TYPE:redis}
+      feishu-counter:
+        type: ${FEISHU_CACHE_TYPE:redis}
+  # OAuth storage configuration (deprecated — use s2.cache.namespaces.oauth-code.type)
   oauth:
     storage:
       type: ${S2_OAUTH_STORAGE_TYPE:redis}
@@ -239,8 +252,7 @@ s2:
       match-fields: ${FEISHU_MATCH_FIELDS:EMPLOYEE_ID,EMAIL,MOBILE}
     export:
       max-rows: ${FEISHU_EXPORT_MAX_ROWS:100000}
-    cache:
-      type: ${FEISHU_CACHE_TYPE:redis}  # caffeine or redis
+    # cache.type moved to s2.cache.namespaces.feishu-*.type (use FEISHU_CACHE_TYPE env var)
   report-download:
     signing-secret: ${REPORT_DOWNLOAD_SIGNING_SECRET:${S2_ENCRYPTION_KEY:}}
     token-ttl-seconds: ${REPORT_DOWNLOAD_TOKEN_TTL_SECONDS:604800}

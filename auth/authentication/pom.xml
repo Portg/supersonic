@@ -82,13 +82,6 @@
             <artifactId>caffeine</artifactId>
         </dependency>
 
-        <!-- Spring Data Redis (optional, for distributed exchange code storage) -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-redis</artifactId>
-            <optional>true</optional>
-        </dependency>
-
         <!-- Jackson JSR310 module for Java 8 date/time serialization -->
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>

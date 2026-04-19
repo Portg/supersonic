@@ -14,6 +14,8 @@ public class CaffeineCacheManager implements CacheManager {
     private final CacheCommonConfig cacheCommonConfig;
     private final CacheProvider provider;
 
+    // Explicit constructor: registry.require() throws at startup if namespace is missing
+    // (fail-fast).
     public CaffeineCacheManager(CacheCommonConfig cacheCommonConfig,
             CacheProviderRegistry registry) {
         this.cacheCommonConfig = cacheCommonConfig;
@@ -39,7 +41,7 @@ public class CaffeineCacheManager implements CacheManager {
         if (StringUtils.isEmpty(prefix)) {
             prefix = "-1";
         }
-        return Joiner.on(":").join(cacheCommonConfig.getCacheCommonApp(),
+        return Joiner.on(":").useForNull("null").join(cacheCommonConfig.getCacheCommonApp(),
                 cacheCommonConfig.getCacheCommonEnv(), cacheCommonConfig.getCacheCommonVersion(),
                 prefix, body);
     }

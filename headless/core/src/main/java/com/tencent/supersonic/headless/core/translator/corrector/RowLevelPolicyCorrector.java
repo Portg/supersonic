@@ -1,5 +1,7 @@
 package com.tencent.supersonic.headless.core.translator.corrector;
 
+import com.tencent.supersonic.headless.core.translator.corrector.audit.PolicyAuditEntry;
+import com.tencent.supersonic.headless.core.translator.corrector.audit.PolicyAuditLogger;
 import com.tencent.supersonic.headless.core.translator.corrector.policy.RowPolicy;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.JSQLParserException;
@@ -23,6 +25,8 @@ import java.util.Locale;
 
 @Slf4j
 public class RowLevelPolicyCorrector implements PhysicalSqlCorrector {
+
+    private final PolicyAuditLogger auditLogger = new PolicyAuditLogger();
 
     @Override
     public String rewrite(String sql, PolicyContext ctx) {
@@ -97,6 +101,9 @@ public class RowLevelPolicyCorrector implements PhysicalSqlCorrector {
                 ps.setWhere(new AndExpression(ps.getWhere(), wrapped));
             }
             modified[0] = true;
+            String userName = ctx.getUser() != null ? ctx.getUser().getName() : "unknown";
+            auditLogger.log(new PolicyAuditEntry(p.getPolicyId(), userName, "row", null, null,
+                    PolicyAuditLogger.digest(ps.toString())));
         }
     }
 

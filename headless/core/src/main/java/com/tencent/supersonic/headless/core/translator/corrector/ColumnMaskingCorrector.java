@@ -1,5 +1,7 @@
 package com.tencent.supersonic.headless.core.translator.corrector;
 
+import com.tencent.supersonic.headless.core.translator.corrector.audit.PolicyAuditEntry;
+import com.tencent.supersonic.headless.core.translator.corrector.audit.PolicyAuditLogger;
 import com.tencent.supersonic.headless.core.translator.corrector.policy.ColumnPolicy;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.JSQLParserException;
@@ -25,6 +27,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ColumnMaskingCorrector implements PhysicalSqlCorrector {
 
+    private final PolicyAuditLogger auditLogger = new PolicyAuditLogger();
+
     @Override
     public String rewrite(String sql, PolicyContext ctx) {
         if (sql == null || sql.isBlank())
@@ -48,7 +52,7 @@ public class ColumnMaskingCorrector implements PhysicalSqlCorrector {
             if (!(stmt instanceof Select select))
                 return sql;
             boolean[] modified = {false};
-            walk(select, colToMask, modified);
+            walk(select, colToMask, modified, ctx);
             return modified[0] ? stmt.toString() : sql;
         } catch (JSQLParserException e) {
             log.warn("ColumnMaskingCorrector parse failed; returning unchanged. err={}",
@@ -57,26 +61,28 @@ public class ColumnMaskingCorrector implements PhysicalSqlCorrector {
         }
     }
 
-    private void walk(Select select, Map<String, String> colToMask, boolean[] modified) {
+    private void walk(Select select, Map<String, String> colToMask, boolean[] modified,
+            PolicyContext ctx) {
         if (select.getWithItemsList() != null) {
             for (WithItem w : select.getWithItemsList()) {
                 if (w.getSelect() != null)
-                    walk(w.getSelect(), colToMask, modified);
+                    walk(w.getSelect(), colToMask, modified, ctx);
             }
         }
         if (select instanceof PlainSelect ps) {
-            rewritePlain(ps, colToMask, modified);
+            rewritePlain(ps, colToMask, modified, ctx);
         } else if (select instanceof SetOperationList sol) {
             if (sol.getSelects() != null) {
                 for (Select child : sol.getSelects())
-                    walk(child, colToMask, modified);
+                    walk(child, colToMask, modified, ctx);
             }
         } else if (select instanceof ParenthesedSelect pss) {
-            walk(pss.getSelect(), colToMask, modified);
+            walk(pss.getSelect(), colToMask, modified, ctx);
         }
     }
 
-    private void rewritePlain(PlainSelect ps, Map<String, String> colToMask, boolean[] modified) {
+    private void rewritePlain(PlainSelect ps, Map<String, String> colToMask, boolean[] modified,
+            PolicyContext ctx) {
         List<SelectItem<?>> items = ps.getSelectItems();
         if (items == null)
             return;
@@ -103,6 +109,9 @@ public class ColumnMaskingCorrector implements PhysicalSqlCorrector {
                 replaced.setAlias(alias);
                 items.set(i, replaced);
                 modified[0] = true;
+                String userName = ctx.getUser() != null ? ctx.getUser().getName() : "unknown";
+                auditLogger.log(new PolicyAuditEntry("col-" + name, userName, "column", null, null,
+                        PolicyAuditLogger.digest(ps.toString())));
             } catch (JSQLParserException e) {
                 log.warn("Failed to render mask template '{}' for column '{}'", mask, name);
             }

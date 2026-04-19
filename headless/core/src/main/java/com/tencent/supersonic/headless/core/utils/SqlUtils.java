@@ -2,7 +2,10 @@ package com.tencent.supersonic.headless.core.utils;
 
 import javax.sql.DataSource;
 
+import com.tencent.supersonic.common.context.TenantContext;
 import com.tencent.supersonic.common.pojo.QueryColumn;
+import com.tencent.supersonic.common.quota.TenantPermit;
+import com.tencent.supersonic.common.quota.TenantQuotaService;
 import com.tencent.supersonic.common.util.DateUtils;
 import com.tencent.supersonic.headless.api.pojo.enums.DataType;
 import com.tencent.supersonic.headless.api.pojo.response.DatabaseResp;
@@ -37,6 +40,12 @@ public class SqlUtils {
 
     @Autowired
     private JdbcDataSource jdbcDataSource;
+
+    @Autowired(required = false)
+    private TenantQuotaService tenantQuotaService;
+
+    @Value("${s2.tenant.quota.default.acquire-timeout-ms:2000}")
+    private long quotaAcquireTimeoutMs;
 
     @Value("${s2.source.result-limit:1000000}")
     private int resultLimit;
@@ -148,7 +157,15 @@ public class SqlUtils {
     }
 
     public void queryInternal(String sql, SemanticQueryResp queryResultWithColumns) {
-        getResult(sql, queryResultWithColumns, jdbcTemplate());
+        Long tenantId = TenantContext.getTenantId();
+        if (tenantQuotaService == null) {
+            getResult(sql, queryResultWithColumns, jdbcTemplate());
+            return;
+        }
+        try (TenantPermit permit =
+                tenantQuotaService.acquireJdbc(tenantId, quotaAcquireTimeoutMs)) {
+            getResult(sql, queryResultWithColumns, jdbcTemplate());
+        }
     }
 
     private SemanticQueryResp getResult(String sql, SemanticQueryResp queryResultWithColumns,

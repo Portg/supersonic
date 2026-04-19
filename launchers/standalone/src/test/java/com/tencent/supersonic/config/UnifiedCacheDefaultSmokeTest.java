@@ -12,17 +12,22 @@ import org.springframework.test.context.TestPropertySource;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Verifies that when {@code s2.cache.type=caffeine}, every registered cache namespace uses the
- * Caffeine backend, including the oauth-code namespace which is also overridden to caffeine here to
- * prevent the deprecated {@code s2.oauth.storage.type} alias from pulling it to Redis.
+ * Verifies that when all cache-related env vars are forced to "caffeine", every registered
+ * namespace uses the Caffeine backend — guarding against per-namespace defaults accidentally
+ * pulling in Redis.
  */
 @SpringBootTest(classes = com.tencent.supersonic.StandaloneLauncher.class)
 @ActiveProfiles("h2")
-@TestPropertySource(properties = {"s2.cache.type=caffeine",
-                // Override deprecated alias so oauth-code also stays on Caffeine
-                "S2_OAUTH_STORAGE_TYPE=caffeine", "EMAIL_HOST=localhost", "EMAIL_PORT=25",
-                "EMAIL_USERNAME=test@example.com", "EMAIL_PASSWORD=test",
-                "spring.mail.host=localhost", "spring.mail.port=25",
+@TestPropertySource(properties = {
+                // Global cache type
+                "s2.cache.type=caffeine",
+                // Override per-namespace env vars so none pull in Redis
+                "S2_CACHE_TYPE=caffeine", "S2_OAUTH_STORAGE_TYPE=caffeine",
+                "FEISHU_CACHE_TYPE=caffeine",
+                // Stub mail placeholders so EmailDeliveryChannel @ConditionalOnProperty evaluates
+                // safely
+                "EMAIL_HOST=localhost", "EMAIL_PORT=25", "EMAIL_USERNAME=test@example.com",
+                "EMAIL_PASSWORD=test", "spring.mail.host=localhost", "spring.mail.port=25",
                 "spring.mail.username=test@example.com", "spring.mail.password=test"})
 class UnifiedCacheDefaultSmokeTest {
 

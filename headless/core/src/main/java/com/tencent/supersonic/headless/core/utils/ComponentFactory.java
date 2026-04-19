@@ -4,10 +4,12 @@ import com.tencent.supersonic.common.util.ContextUtils;
 import com.tencent.supersonic.headless.core.cache.QueryCache;
 import com.tencent.supersonic.headless.core.executor.QueryAccelerator;
 import com.tencent.supersonic.headless.core.executor.QueryExecutor;
+import com.tencent.supersonic.headless.core.translator.corrector.PhysicalSqlCorrector;
 import com.tencent.supersonic.headless.core.translator.optimizer.QueryOptimizer;
 import com.tencent.supersonic.headless.core.translator.parser.QueryParser;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.support.SpringFactoriesLoader;
+import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,6 +25,7 @@ public class ComponentFactory {
     private static List<QueryExecutor> queryExecutors = new ArrayList<>();
     private static List<QueryAccelerator> queryAccelerators = new ArrayList<>();
     private static List<QueryParser> queryParsers = new ArrayList<>();
+    private static List<PhysicalSqlCorrector> physicalSqlCorrectors = new ArrayList<>();
     private static QueryCache queryCache;
 
     static {
@@ -59,6 +62,12 @@ public class ComponentFactory {
             initQueryParser();
         }
         return queryParsers;
+    }
+
+    public static List<PhysicalSqlCorrector> getPhysicalSqlCorrectors() {
+        return CollectionUtils.isEmpty(physicalSqlCorrectors)
+                ? init(PhysicalSqlCorrector.class, physicalSqlCorrectors)
+                : physicalSqlCorrectors;
     }
 
     public static QueryCache getQueryCache() {

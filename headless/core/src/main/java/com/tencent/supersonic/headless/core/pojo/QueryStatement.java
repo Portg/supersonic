@@ -26,6 +26,8 @@ public class QueryStatement {
     private Integer limit = 1000;
     private Boolean isTranslated = false;
     private User user;
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private com.tencent.supersonic.headless.core.translator.corrector.PolicyContext policyContext;
 
     public boolean isOk() {
         return StringUtils.isBlank(errMsg) && StringUtils.isNotBlank(sql);

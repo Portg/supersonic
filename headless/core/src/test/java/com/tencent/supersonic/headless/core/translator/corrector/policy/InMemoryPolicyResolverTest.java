@@ -40,4 +40,35 @@ class InMemoryPolicyResolverTest {
         assertEquals(1, rows.size());
         assertEquals("P1", rows.get(0).getPolicyId());
     }
+
+    @Test
+    void returnsEmptyColumnPoliciesWhenNoFixtureRegistered() {
+        InMemoryPolicyResolver resolver = new InMemoryPolicyResolver();
+        List<ColumnPolicy> cols = resolver.resolveColumnPolicies(User.get(0L, "alice"), Set.of(1L));
+        assertTrue(cols.isEmpty());
+    }
+
+    @Test
+    void returnsRegisteredColumnPolicyForMatchingUser() {
+        InMemoryPolicyResolver resolver = new InMemoryPolicyResolver();
+        ColumnPolicy p = new ColumnPolicy("CP1", 1L, "phone", "CONCAT(LEFT(%s,3),'****')");
+        resolver.register("alice", p);
+
+        List<ColumnPolicy> cols = resolver.resolveColumnPolicies(User.get(0L, "alice"), Set.of(1L));
+        assertEquals(1, cols.size());
+        assertEquals("CP1", cols.get(0).getPolicyId());
+    }
+
+    @Test
+    void filtersByRequestedModelIdsForColumnPolicies() {
+        InMemoryPolicyResolver resolver = new InMemoryPolicyResolver();
+        resolver.register("alice",
+                new ColumnPolicy("CP1", 1L, "phone", "CONCAT(LEFT(%s,3),'****')"));
+        resolver.register("alice",
+                new ColumnPolicy("CP2", 2L, "email", "CONCAT(LEFT(%s,3),'****')"));
+
+        List<ColumnPolicy> cols = resolver.resolveColumnPolicies(User.get(0L, "alice"), Set.of(1L));
+        assertEquals(1, cols.size());
+        assertEquals("CP1", cols.get(0).getPolicyId());
+    }
 }

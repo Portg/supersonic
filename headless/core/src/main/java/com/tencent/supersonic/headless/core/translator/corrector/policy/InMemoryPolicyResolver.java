@@ -7,7 +7,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /** Fixture-only resolver used by tests and for Task 2 wiring. Not a @Component. */
 public class InMemoryPolicyResolver implements PolicyResolver {
@@ -27,13 +26,13 @@ public class InMemoryPolicyResolver implements PolicyResolver {
     public List<RowPolicy> resolveRowPolicies(User user, Set<Long> modelIds) {
         return rowByUser.getOrDefault(user.getName(), List.of()).stream().filter(
                 p -> modelIds == null || modelIds.isEmpty() || modelIds.contains(p.getModelId()))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
     public List<ColumnPolicy> resolveColumnPolicies(User user, Set<Long> modelIds) {
         return colByUser.getOrDefault(user.getName(), List.of()).stream().filter(
                 p -> modelIds == null || modelIds.isEmpty() || modelIds.contains(p.getModelId()))
-                .collect(Collectors.toList());
+                .toList();
     }
 }

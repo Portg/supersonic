@@ -71,8 +71,8 @@ public class UnifiedCacheAutoConfiguration {
                 b.ttl(cfg.getTtl());
             if (cfg.getMaxSize() > 0L)
                 b.maxSize(cfg.getMaxSize());
-            if (cfg.isTenantScoped())
-                b.tenantScoped(true);
+            if (cfg.getTenantScoped() != null)
+                b.tenantScoped(cfg.getTenantScoped());
             CacheNamespace ns = b.build();
             if (ns.getTtl() == null) {
                 throw new IllegalStateException("Cache namespace '" + name

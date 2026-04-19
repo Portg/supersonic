@@ -19,6 +19,6 @@ public class UnifiedCacheProperties {
         private CacheType type;
         private Duration ttl;
         private long maxSize = 10_000L;
-        private boolean tenantScoped;
+        private Boolean tenantScoped;
     }
 }

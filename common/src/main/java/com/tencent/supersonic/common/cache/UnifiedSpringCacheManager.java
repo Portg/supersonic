@@ -80,10 +80,16 @@ public class UnifiedSpringCacheManager implements CacheManager {
 
         @Override
         public void put(@NonNull Object key, @Nullable Object value) {
-            if (value == null)
+            if (value == null) {
                 provider.evict(key.toString());
-            else
-                provider.put(key.toString(), value.toString());
+            } else if (value instanceof String s) {
+                provider.put(key.toString(), s);
+            } else {
+                throw new IllegalArgumentException(
+                        "UnifiedSpringCacheManager only supports String values; got "
+                                + value.getClass().getName()
+                                + ". Use the CacheProvider API with explicit serialization.");
+            }
         }
 
         @Override

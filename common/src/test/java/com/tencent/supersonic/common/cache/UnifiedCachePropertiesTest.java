@@ -33,7 +33,7 @@ class UnifiedCachePropertiesTest {
         assertThat(oauth.getType()).isEqualTo(CacheType.CAFFEINE);
         assertThat(oauth.getTtl()).isEqualTo(Duration.ofSeconds(45));
         assertThat(oauth.getMaxSize()).isEqualTo(2000L);
-        assertThat(oauth.isTenantScoped()).isFalse();
+        assertThat(oauth.getTenantScoped()).isEqualTo(Boolean.FALSE);
 
         UnifiedCacheProperties.NamespaceConfig feishu = nss.get("feishu-token");
         assertThat(feishu.getType()).isNull();

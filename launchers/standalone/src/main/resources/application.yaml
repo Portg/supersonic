@@ -161,6 +161,10 @@ s2:
       mid-level-require-auth: false
       # Whether to log access to MID sensitive level fields (default: true)
       log-mid-level-access: true
+    corrector:
+      enabled: true
+      shadow-mode: true
+      audit-log-enabled: true
   # Multi-tenant configuration
   tenant:
     enabled: true

@@ -33,6 +33,7 @@ import com.tencent.supersonic.headless.core.pojo.StructQuery;
 import com.tencent.supersonic.headless.core.translator.SemanticTranslator;
 import com.tencent.supersonic.headless.core.translator.TranslatorConfig;
 import com.tencent.supersonic.headless.core.translator.corrector.PolicyContext;
+import com.tencent.supersonic.headless.core.translator.corrector.PolicyCorrectorProperties;
 import com.tencent.supersonic.headless.core.translator.corrector.policy.PolicyResolver;
 import com.tencent.supersonic.headless.core.utils.ComponentFactory;
 import com.tencent.supersonic.headless.server.annotation.S2DataPermission;
@@ -68,6 +69,7 @@ public class S2SemanticLayerService implements SemanticLayerService {
     private final DimensionService dimensionService;
     private final TranslatorConfig translatorConfig;
     private final PolicyResolver policyResolver;
+    private final PolicyCorrectorProperties correctorProperties;
     private final QueryCache queryCache = ComponentFactory.getQueryCache();
     private final List<QueryExecutor> queryExecutors = ComponentFactory.getQueryExecutors();
 
@@ -77,7 +79,8 @@ public class S2SemanticLayerService implements SemanticLayerService {
             MetricDrillDownChecker metricDrillDownChecker,
             KnowledgeBaseService knowledgeBaseService, MetricService metricService,
             DimensionService dimensionService, DomainService domainService,
-            TranslatorConfig translatorConfig, PolicyResolver policyResolver) {
+            TranslatorConfig translatorConfig, PolicyResolver policyResolver,
+            PolicyCorrectorProperties correctorProperties) {
         this.statUtils = statUtils;
         this.queryUtils = queryUtils;
         this.semanticSchemaManager = semanticSchemaManager;
@@ -91,6 +94,7 @@ public class S2SemanticLayerService implements SemanticLayerService {
         this.domainService = domainService;
         this.translatorConfig = translatorConfig;
         this.policyResolver = policyResolver;
+        this.correctorProperties = correctorProperties;
     }
 
     public DataSetSchema getDataSetSchema(Long id) {
@@ -333,7 +337,7 @@ public class S2SemanticLayerService implements SemanticLayerService {
         ctx.setDataSetId(queryReq.getDataSetId());
         ctx.setRowPolicies(policyResolver.resolveRowPolicies(user, modelIds));
         ctx.setColumnPolicies(policyResolver.resolveColumnPolicies(user, modelIds));
-        ctx.setShadowMode(false); // Task 8 will introduce PolicyCorrectorProperties
+        ctx.setShadowMode(correctorProperties.isShadowMode());
         queryStatement.setPolicyContext(ctx);
     }
 

@@ -26,6 +26,10 @@ import com.tencent.supersonic.headless.api.pojo.response.ModelResp;
 import com.tencent.supersonic.headless.api.pojo.response.SemanticQueryResp;
 import com.tencent.supersonic.headless.api.pojo.response.SemanticSchemaResp;
 import com.tencent.supersonic.headless.api.service.SchemaService;
+import com.tencent.supersonic.headless.core.translator.corrector.PolicyContext;
+import com.tencent.supersonic.headless.core.translator.corrector.RowLevelPolicyCorrector;
+import com.tencent.supersonic.headless.core.translator.corrector.policy.RowPolicy;
+import com.tencent.supersonic.headless.core.translator.corrector.shadow.ShadowModeComparator;
 import com.tencent.supersonic.headless.server.service.DataSetAuthService;
 import com.tencent.supersonic.headless.server.service.ModelService;
 import com.tencent.supersonic.headless.server.utils.QueryStructUtils;
@@ -63,6 +67,7 @@ public class S2DataPermissionAspect {
     private final AuthService authService;
     private final DataSetAuthService dataSetAuthService;
     private final SensitiveLevelConfig sensitiveLevelConfig;
+    private final ShadowModeComparator shadowComparator;
 
     @Pointcut("@annotation(com.tencent.supersonic.headless.server.annotation.S2DataPermission)")
     private void s2PermissionCheck() {}
@@ -122,7 +127,7 @@ public class S2DataPermissionAspect {
         checkColPermission(queryReq, authorizedResource, modelIds, semanticSchemaResp);
 
         // 6. check row permission
-        checkRowPermission(queryReq, authorizedResource);
+        checkRowPermission(queryReq, authorizedResource, user);
 
         // 7. add hint to user
         Object result = joinPoint.proceed();
@@ -168,9 +173,9 @@ public class S2DataPermissionAspect {
     }
 
     private void checkRowPermission(SemanticQueryReq queryReq,
-            AuthorizedResourceResp authorizedResource) {
+            AuthorizedResourceResp authorizedResource, User user) {
         if (queryReq instanceof QuerySqlReq) {
-            doRowPermission((QuerySqlReq) queryReq, authorizedResource);
+            doRowPermission((QuerySqlReq) queryReq, authorizedResource, user);
         }
         if (queryReq instanceof QueryStructReq) {
             doRowPermission((QueryStructReq) queryReq, authorizedResource);
@@ -195,8 +200,8 @@ public class S2DataPermissionAspect {
         return schemaService.fetchSemanticSchema(filter);
     }
 
-    private void doRowPermission(QuerySqlReq querySqlReq,
-            AuthorizedResourceResp authorizedResource) {
+    private void doRowPermission(QuerySqlReq querySqlReq, AuthorizedResourceResp authorizedResource,
+            User user) {
         log.debug("Start doRowPermission logic");
 
         if (CollectionUtils.isEmpty(authorizedResource.getFilters())) {
@@ -225,6 +230,14 @@ public class S2DataPermissionAspect {
                 log.info("Before doRowPermission, querySqlReq: {}", originalSql);
                 querySqlReq.setSql(modifiedSql);
                 log.info("After doRowPermission, querySqlReq: {}", modifiedSql);
+                // Shadow comparison: log diff between old-aspect result and new corrector result
+                try {
+                    String simulatedSql = simulateNewCorrector(originalSql, authorizedResource);
+                    String userName = user != null ? user.getName() : "unknown";
+                    shadowComparator.compare(modifiedSql, simulatedSql, userName);
+                } catch (Exception e) {
+                    log.debug("shadow compare failed", e);
+                }
             }
         } catch (JSQLParserException e) {
             log.error("JSQLParser encountered an exception: {}", e.toString());
@@ -414,5 +427,35 @@ public class S2DataPermissionAspect {
                         new QueryAuthorization(modelResp.getName(), exprList, descList, message));
             }
         }
+    }
+
+    /**
+     * Simulates what RowLevelPolicyCorrector would produce for the given SQL and authorized
+     * resource. Used in shadow mode to compare old-aspect output vs. new corrector output.
+     *
+     * NOTE: tableBizNames is left empty intentionally — RowLevelPolicyCorrector only injects when a
+     * policy's tableBizNames matches a referenced table. In shadow mode we pass empty lists so the
+     * corrector skips injection, making the simulated result equal to the original SQL. Diffs
+     * logged here therefore reflect cases where the corrector's table-matching logic diverges from
+     * the aspect's blanket OR-injection approach.
+     */
+    static String simulateNewCorrector(String originalSql, AuthorizedResourceResp auth) {
+        if (auth == null || CollectionUtils.isEmpty(auth.getFilters()))
+            return originalSql;
+        PolicyContext ctx = new PolicyContext();
+        List<RowPolicy> rowPolicies = auth.getFilters().stream()
+                .flatMap(f -> f.getExpressions() == null ? java.util.stream.Stream.empty()
+                        : f.getExpressions().stream())
+                .filter(e -> e != null && !e.isBlank()).map(expr -> {
+                    RowPolicy p = new RowPolicy();
+                    p.setPolicyId("shadow");
+                    p.setFilterExpression(expr);
+                    p.setTableBizNames(List.of());
+                    return p;
+                }).collect(Collectors.toList());
+        ctx.setRowPolicies(rowPolicies);
+        // shadowMode=false so the corrector actually runs its rewrite logic
+        ctx.setShadowMode(false);
+        return new RowLevelPolicyCorrector().rewrite(originalSql, ctx);
     }
 }

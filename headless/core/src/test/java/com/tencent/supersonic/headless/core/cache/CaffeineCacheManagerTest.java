@@ -4,11 +4,14 @@ import com.tencent.supersonic.common.cache.CacheNamespace;
 import com.tencent.supersonic.common.cache.CacheProvider;
 import com.tencent.supersonic.common.cache.CacheProviderRegistry;
 import com.tencent.supersonic.common.cache.CaffeineCacheProvider;
+import com.tencent.supersonic.common.pojo.QueryColumn;
+import com.tencent.supersonic.headless.api.pojo.response.SemanticQueryResp;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -35,6 +38,28 @@ class CaffeineCacheManagerTest {
     void putThenGet() {
         manager.put("k1", "v1");
         assertThat(manager.get("k1")).isEqualTo("v1");
+    }
+
+    @Test
+    void stringValueThatLooksLikeCacheEnvelopeRoundtripsAsString() {
+        String value = "__s2_cache_semantic_query_resp__:{\"resultList\":[]}";
+        manager.put("literal", value);
+        assertThat(manager.get("literal")).isEqualTo(value);
+    }
+
+    @Test
+    void semanticQueryRespRoundtripsAsObject() {
+        SemanticQueryResp resp = new SemanticQueryResp();
+        resp.setColumns(List.of(new QueryColumn("列1", "STRING", "c1")));
+        resp.setResultList(List.of(Map.of("c1", "v1")));
+
+        manager.put("semantic", resp);
+
+        Object cached = manager.get("semantic");
+        assertThat(cached).isInstanceOf(SemanticQueryResp.class);
+        SemanticQueryResp cachedResp = (SemanticQueryResp) cached;
+        assertThat(cachedResp.getColumns()).hasSize(1);
+        assertThat(cachedResp.getResultList()).containsExactly(Map.of("c1", "v1"));
     }
 
     @Test

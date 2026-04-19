@@ -47,6 +47,11 @@ public class CaffeineCacheProvider implements CacheProvider {
     }
 
     @Override
+    public Optional<String> getAndEvict(String key) {
+        return Optional.ofNullable(values.asMap().remove(scoped(key)));
+    }
+
+    @Override
     public void put(String key, String value) {
         values.put(scoped(key), value);
     }

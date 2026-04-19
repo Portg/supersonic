@@ -65,12 +65,11 @@ public class OAuthCodeExchangeService {
             return null;
         }
 
-        Optional<String> raw = cache.get(exchangeCode);
+        Optional<String> raw = cache.getAndEvict(exchangeCode);
         if (raw.isEmpty()) {
             log.warn("Exchange code not found or invalid: {}", exchangeCode);
             return null;
         }
-        cache.evict(exchangeCode);
 
         try {
             OAuthCodeExchange exchange = objectMapper.readValue(raw.get(), OAuthCodeExchange.class);

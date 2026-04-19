@@ -57,6 +57,15 @@ public abstract class CacheProviderContractTest {
     }
 
     @Test
+    void getAndEvictConsumesEntryOnce() {
+        CacheProvider cache = newProvider(defaultNs());
+        cache.put("k1", "v1");
+        assertThat(cache.getAndEvict("k1")).contains("v1");
+        assertThat(cache.getAndEvict("k1")).isEmpty();
+        assertThat(cache.get("k1")).isEmpty();
+    }
+
+    @Test
     void evictIdempotentOnMissingKey() {
         CacheProvider cache = newProvider(defaultNs());
         cache.evict("never-written");

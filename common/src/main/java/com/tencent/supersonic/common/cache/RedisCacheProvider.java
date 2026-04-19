@@ -21,6 +21,11 @@ public class RedisCacheProvider implements CacheProvider {
             "local n = redis.call('INCR', KEYS[1])\n"
                     + "if n == 1 then redis.call('PEXPIRE', KEYS[1], ARGV[1]) end\n" + "return n",
             Long.class);
+    private static final DefaultRedisScript<String> GET_AND_DELETE_SCRIPT =
+            new DefaultRedisScript<>(
+                    "local v = redis.call('GET', KEYS[1])\n"
+                            + "if v then redis.call('DEL', KEYS[1]) end\n" + "return v",
+                    String.class);
 
     private final CacheNamespace namespace;
     private final StringRedisTemplate redis;
@@ -51,7 +56,7 @@ public class RedisCacheProvider implements CacheProvider {
 
     @Override
     public Optional<String> getAndEvict(String key) {
-        return Optional.ofNullable(redis.opsForValue().getAndDelete(fullKey(key)));
+        return Optional.ofNullable(redis.execute(GET_AND_DELETE_SCRIPT, List.of(fullKey(key))));
     }
 
     @Override

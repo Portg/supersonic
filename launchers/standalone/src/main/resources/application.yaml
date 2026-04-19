@@ -141,8 +141,6 @@ s2:
   cache:
     type: ${S2_CACHE_TYPE:redis}
     namespaces:
-      oauth-code:
-        type: ${S2_OAUTH_STORAGE_TYPE:redis}
       feishu-token:
         type: ${FEISHU_CACHE_TYPE:redis}
       feishu-event-dedup:

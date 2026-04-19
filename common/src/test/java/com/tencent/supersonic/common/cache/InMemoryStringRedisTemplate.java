@@ -5,6 +5,7 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.core.script.RedisScript;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -213,6 +214,29 @@ public class InMemoryStringRedisTemplate extends StringRedisTemplate {
                 return InMemoryStringRedisTemplate.this;
             }
         };
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> T execute(RedisScript<T> script, List<String> keys, Object... args) {
+        if (Long.class.equals(script.getResultType())) {
+            String key = keys.get(0);
+            Long ttlMs = Long.valueOf(String.valueOf(args[0]));
+            prune(key);
+            Entry current = store.computeIfAbsent(key, k -> new Entry("0", null));
+            long next = Long.parseLong(current.value) + 1L;
+            Instant expiresAt = next == 1L ? now.plusMillis(ttlMs) : current.expiresAt;
+            store.put(key, new Entry(Long.toString(next), expiresAt));
+            return (T) Long.valueOf(next);
+        }
+        if (String.class.equals(script.getResultType())) {
+            String key = keys.get(0);
+            prune(key);
+            Entry current = store.remove(key);
+            return current == null ? null : (T) current.value;
+        }
+        throw new UnsupportedOperationException(
+                "Unsupported script result type: " + script.getResultType());
     }
 
     // ── key-level operations ──────────────────────────────────────────────────

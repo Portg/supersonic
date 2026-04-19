@@ -9,6 +9,8 @@ public interface CacheProvider {
 
     Optional<String> get(String key);
 
+    Optional<String> getAndEvict(String key);
+
     void put(String key, String value);
 
     boolean putIfAbsent(String key, String value);

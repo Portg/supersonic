@@ -10,6 +10,11 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -47,6 +52,31 @@ class OAuthCodeExchangeServiceTest {
         String code = service.createExchangeCode("access", "refresh", "sid", 42L);
         assertThat(service.exchangeCodeForTokens(code)).isNotNull();
         assertThat(service.exchangeCodeForTokens(code)).isNull();
+    }
+
+    @Test
+    void exchangeCodeConcurrentUseAllowsOnlyOneSuccess() throws Exception {
+        String code = service.createExchangeCode("access", "refresh", "sid", 42L);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch start = new CountDownLatch(1);
+        AtomicInteger successes = new AtomicInteger();
+        Runnable task = () -> {
+            try {
+                start.await();
+                if (service.exchangeCodeForTokens(code) != null) {
+                    successes.incrementAndGet();
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        };
+        executor.submit(task);
+        executor.submit(task);
+        start.countDown();
+        executor.shutdown();
+
+        assertThat(executor.awaitTermination(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(successes.get()).isEqualTo(1);
     }
 
     @Test

@@ -61,6 +61,11 @@ class CacheProviderRegistryTest {
             }
 
             @Override
+            public Optional<String> getAndEvict(String k) {
+                return Optional.empty();
+            }
+
+            @Override
             public void put(String k, String v) {}
 
             @Override

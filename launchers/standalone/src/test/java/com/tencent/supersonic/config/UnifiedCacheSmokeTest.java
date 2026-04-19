@@ -32,7 +32,6 @@ import static org.assertj.core.api.Assertions.assertThat;
                 "spring.mail.host=localhost", "spring.mail.port=25",
                 "spring.mail.username=test@example.com", "spring.mail.password=test"})
 @Import(UnifiedCacheSmokeTest.FakeRedisConfig.class)
-@DirtiesContext
 class UnifiedCacheSmokeTest {
 
     @TestConfiguration

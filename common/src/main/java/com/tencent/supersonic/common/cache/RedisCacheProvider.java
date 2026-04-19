@@ -3,7 +3,9 @@ package com.tencent.supersonic.common.cache;
 import com.tencent.supersonic.common.context.TenantContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -11,6 +13,14 @@ import java.util.concurrent.TimeUnit;
 public class RedisCacheProvider implements CacheProvider {
 
     private static final String GLOBAL_PREFIX = "s2:cache:";
+
+    // Atomically INCR and, on first increment, set the TTL in one round-trip.
+    // Avoids a window where INCR succeeds but EXPIRE never runs (JVM crash, network error),
+    // which would leave the counter key without expiry and break fixed-window semantics.
+    private static final DefaultRedisScript<Long> INCR_AND_EXPIRE_SCRIPT = new DefaultRedisScript<>(
+            "local n = redis.call('INCR', KEYS[1])\n"
+                    + "if n == 1 then redis.call('PEXPIRE', KEYS[1], ARGV[1]) end\n" + "return n",
+            Long.class);
 
     private final CacheNamespace namespace;
     private final StringRedisTemplate redis;
@@ -40,6 +50,11 @@ public class RedisCacheProvider implements CacheProvider {
     }
 
     @Override
+    public Optional<String> getAndEvict(String key) {
+        return Optional.ofNullable(redis.opsForValue().getAndDelete(fullKey(key)));
+    }
+
+    @Override
     public void put(String key, String value) {
         redis.opsForValue().set(fullKey(key), value, ttlMs, TimeUnit.MILLISECONDS);
     }
@@ -58,11 +73,8 @@ public class RedisCacheProvider implements CacheProvider {
 
     @Override
     public long increment(String key) {
-        String fk = fullKey(key);
-        Long count = redis.opsForValue().increment(fk);
-        if (count != null && count == 1L) {
-            redis.expire(fk, ttlMs, TimeUnit.MILLISECONDS);
-        }
+        Long count =
+                redis.execute(INCR_AND_EXPIRE_SCRIPT, List.of(fullKey(key)), String.valueOf(ttlMs));
         return count == null ? 0L : count;
     }
 

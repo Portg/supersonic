@@ -17,9 +17,6 @@ public class CacheCommonConfig {
     @Value("${s2.cache.common.version:0}")
     private Integer cacheCommonVersion;
 
-    @Value("${s2.cache.common.expire.after.write:10}")
-    private Integer cacheCommonExpireAfterWrite;
-
     @Value("${s2.query.cache.enable:true}")
     private Boolean cacheEnable;
 }

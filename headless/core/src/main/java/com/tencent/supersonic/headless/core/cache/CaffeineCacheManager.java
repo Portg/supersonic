@@ -1,10 +1,10 @@
 package com.tencent.supersonic.headless.core.cache;
 
-import com.github.benmanes.caffeine.cache.Cache;
 import com.google.common.base.Joiner;
+import com.tencent.supersonic.common.cache.CacheProvider;
+import com.tencent.supersonic.common.cache.CacheProviderRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -12,26 +12,25 @@ import org.springframework.stereotype.Component;
 public class CaffeineCacheManager implements CacheManager {
 
     private final CacheCommonConfig cacheCommonConfig;
-
-    private final Cache<String, Object> caffeineCache;
+    private final CacheProvider provider;
 
     public CaffeineCacheManager(CacheCommonConfig cacheCommonConfig,
-            @Qualifier("caffeineCache") Cache<String, Object> caffeineCache) {
+            CacheProviderRegistry registry) {
         this.cacheCommonConfig = cacheCommonConfig;
-        this.caffeineCache = caffeineCache;
+        this.provider = registry.require("semantic-query");
     }
 
     @Override
     public Boolean put(String key, Object value) {
-        log.debug("[put caffeineCache] key:{}, value:{}", key, value);
-        caffeineCache.put(key, value);
+        log.debug("[put cache] key:{}", key);
+        provider.put(key, value == null ? "" : value.toString());
         return true;
     }
 
     @Override
     public Object get(String key) {
-        Object value = caffeineCache.asMap().get(key);
-        log.debug("[get caffeineCache] key:{}, value:{}", key, value);
+        Object value = provider.get(key).orElse(null);
+        log.debug("[get cache] key:{}, hit:{}", key, value != null);
         return value;
     }
 
@@ -47,7 +46,7 @@ public class CaffeineCacheManager implements CacheManager {
 
     @Override
     public Boolean removeCache(String key) {
-        caffeineCache.asMap().remove(key);
+        provider.evict(key);
         return true;
     }
 }

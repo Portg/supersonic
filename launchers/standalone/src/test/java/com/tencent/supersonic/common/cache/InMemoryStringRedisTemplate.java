@@ -25,7 +25,8 @@ public class InMemoryStringRedisTemplate extends StringRedisTemplate {
 
     @Override
     public void afterPropertiesSet() {
-        // No-op: skip connection factory validation — this template is backed by an in-memory store.
+        // No-op: skip connection factory validation — this template is backed by an in-memory
+        // store.
     }
 
     public void advanceTime(Duration amount) {

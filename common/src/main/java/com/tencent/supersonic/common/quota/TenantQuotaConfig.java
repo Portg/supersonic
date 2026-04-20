@@ -9,7 +9,7 @@ public class TenantQuotaConfig {
 
     private boolean enabled = false;
     private Default defaultQuota = new Default();
-    private Long fallbackTenantId = 0L;
+    private Long fallbackTenantId = 1L;
 
     @Data
     public static class Default {

@@ -244,8 +244,8 @@ s2:
       enabled: ${S2_TENANT_QUOTA_ENABLED:false}
       # Tenant ID used when TenantContext is empty (e.g. background jobs, scheduled tasks).
       # These requests consume from this tenant's semaphore instead of bypassing quota entirely.
-      # Set to a dedicated "system" tenant ID in production to avoid starving real tenants.
-      fallback-tenant-id: 0
+      # Defaults to the built-in tenant. Override to a dedicated system tenant if needed.
+      fallback-tenant-id: 1
       default-quota:
         jdbc-concurrent: ${S2_TENANT_QUOTA_JDBC:10}
         llm-concurrent: ${S2_TENANT_QUOTA_LLM:5}

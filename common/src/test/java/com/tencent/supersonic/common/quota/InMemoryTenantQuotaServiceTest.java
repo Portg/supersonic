@@ -40,8 +40,8 @@ class InMemoryTenantQuotaServiceTest {
                 new InMemoryTenantQuotaService(configWithDefault(1, 100), tid -> null);
         try (TenantPermit p = svc.acquireJdbc(null, 100)) {
             assertNotNull(p);
-            assertEquals(0L, p.getTenantId());
-            assertEquals(0, svc.availablePermits().get(0L));
+            assertEquals(1L, p.getTenantId());
+            assertEquals(0, svc.availablePermits().get(1L));
         }
     }
 

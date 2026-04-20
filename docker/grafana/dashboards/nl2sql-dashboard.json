@@ -1,0 +1,100 @@
+{
+  "annotations": {"list": [{"builtIn": 1, "datasource": {"type": "grafana", "uid": "-- Grafana --"}, "enable": true, "hide": true, "iconColor": "rgba(0, 211, 255, 1)", "name": "Annotations & Alerts", "type": "dashboard"}]},
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "title": "SuperSonic NL2SQL Chain Observability",
+  "uid": "s2-nl2sql",
+  "tags": ["supersonic", "nl2sql"],
+  "schemaVersion": 39,
+  "refresh": "30s",
+  "time": {"from": "now-6h", "to": "now"},
+  "templating": {
+    "list": [
+      {"name": "DS_PROMETHEUS", "type": "datasource", "query": "prometheus", "current": {"text": "Prometheus", "value": "Prometheus"}},
+      {"name": "stage", "type": "query", "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "query": "label_values(s2_nl2sql_stage_duration_seconds_count, stage)", "refresh": 2, "multi": true, "includeAll": true},
+      {"name": "tenant", "type": "query", "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "query": "label_values(s2_nl2sql_stage_duration_seconds_count, tenant_id)", "refresh": 2, "multi": true, "includeAll": true}
+    ]
+  },
+  "panels": [
+    {
+      "id": 1, "title": "Stage Duration p50/p95/p99 by stage", "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 0},
+      "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
+      "targets": [
+        {"expr": "histogram_quantile(0.50, sum by (le, stage) (rate(s2_nl2sql_stage_duration_seconds_bucket{stage=~\"$stage\", tenant_id=~\"$tenant\"}[5m])))", "legendFormat": "p50 {{stage}}", "refId": "A"},
+        {"expr": "histogram_quantile(0.95, sum by (le, stage) (rate(s2_nl2sql_stage_duration_seconds_bucket{stage=~\"$stage\", tenant_id=~\"$tenant\"}[5m])))", "legendFormat": "p95 {{stage}}", "refId": "B"},
+        {"expr": "histogram_quantile(0.99, sum by (le, stage) (rate(s2_nl2sql_stage_duration_seconds_bucket{stage=~\"$stage\", tenant_id=~\"$tenant\"}[5m])))", "legendFormat": "p99 {{stage}}", "refId": "C"}
+      ]
+    },
+    {
+      "id": 2, "title": "Stage Error Rate", "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "fieldConfig": {"defaults": {"unit": "percentunit", "max": 1, "min": 0}, "overrides": []},
+      "targets": [
+        {"expr": "sum by (stage) (rate(s2_nl2sql_stage_outcome_total{outcome=\"error\", tenant_id=~\"$tenant\"}[5m])) / clamp_min(sum by (stage) (rate(s2_nl2sql_stage_outcome_total{tenant_id=~\"$tenant\"}[5m])), 0.0001)", "legendFormat": "{{stage}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 3, "title": "LLM Latency p95/p99 by model", "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
+      "targets": [
+        {"expr": "histogram_quantile(0.95, sum by (le, model) (rate(s2_nl2sql_llm_duration_seconds_bucket[5m])))", "legendFormat": "p95 {{model}}", "refId": "A"},
+        {"expr": "histogram_quantile(0.99, sum by (le, model) (rate(s2_nl2sql_llm_duration_seconds_bucket[5m])))", "legendFormat": "p99 {{model}}", "refId": "B"}
+      ]
+    },
+    {
+      "id": 4, "title": "LLM Token Usage (rate/s) by kind", "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+      "fieldConfig": {"defaults": {"unit": "short", "custom": {"stacking": {"mode": "normal"}}}, "overrides": []},
+      "targets": [
+        {"expr": "sum by (model, kind) (rate(s2_nl2sql_llm_tokens_total[5m]))", "legendFormat": "{{model}} {{kind}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 5, "title": "Mapper Hit Rate", "type": "bargauge",
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+      "fieldConfig": {"defaults": {"unit": "percentunit", "min": 0, "max": 1}, "overrides": []},
+      "options": {"orientation": "horizontal", "displayMode": "gradient"},
+      "targets": [
+        {"expr": "sum by (mapper_name) (rate(s2_nl2sql_mapper_hits_total{hit=\"true\"}[10m])) / clamp_min(sum by (mapper_name) (rate(s2_nl2sql_mapper_hits_total[10m])), 0.0001)", "legendFormat": "{{mapper_name}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 6, "title": "DB Duration p95 by db_type", "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+      "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
+      "targets": [
+        {"expr": "histogram_quantile(0.95, sum by (le, db_type) (rate(s2_nl2sql_db_duration_seconds_bucket[5m])))", "legendFormat": "p95 {{db_type}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 7, "title": "DB Rows Scanned avg", "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "targets": [
+        {"expr": "rate(s2_nl2sql_sql_rows_scanned_sum[5m]) / clamp_min(rate(s2_nl2sql_sql_rows_scanned_count[5m]), 1)", "legendFormat": "avg {{db_type}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 8, "title": "Stage Outcome Breakdown", "type": "piechart",
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 32},
+      "options": {"legend": {"showLegend": true, "placement": "right"}, "pieType": "donut"},
+      "targets": [
+        {"expr": "sum by (outcome) (increase(s2_nl2sql_stage_outcome_total{tenant_id=~\"$tenant\"}[1h]))", "legendFormat": "{{outcome}}", "refId": "A"}
+      ]
+    }
+  ]
+}

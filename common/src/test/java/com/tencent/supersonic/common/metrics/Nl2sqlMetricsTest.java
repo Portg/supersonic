@@ -58,6 +58,13 @@ class Nl2sqlMetricsTest {
     }
 
     @Test
+    void recordLlmTokensIgnoresNonPositiveValues() {
+        metrics.recordLlmTokens("gpt-4o", 0, -1);
+
+        assertThat(registry.find(Nl2sqlMetricConstants.LLM_TOKENS_TOTAL).meters()).isEmpty();
+    }
+
+    @Test
     void startStageReturnsAutoCloseableThatStopsTimer() {
         try (Nl2sqlMetrics.StageTimer t =
                 metrics.startStage("mapper", "acme", "agent-1", "NL2SQLParser")) {
@@ -76,5 +83,26 @@ class Nl2sqlMetricsTest {
         Counter c = registry.find(Nl2sqlMetricConstants.MAPPER_HITS_TOTAL)
                 .tag("mapper_name", "KeywordMapper").tag("hit", "true").counter();
         assertThat(c.count()).isEqualTo(1.0);
+    }
+
+    @Test
+    void missingMeterRegistryIsNoop() {
+        Nl2sqlMetrics noop = new Nl2sqlMetrics((io.micrometer.core.instrument.MeterRegistry) null,
+                new TenantTagNormalizer(List.of(), 10, true));
+
+        noop.recordStage("rule_parse", Duration.ofMillis(1), Nl2sqlMetricConstants.OUTCOME_SUCCESS,
+                "acme", "agent-1", "NL2SQLParser");
+        noop.recordLlmLatency("gpt-4o", Duration.ofMillis(1), Nl2sqlMetricConstants.OUTCOME_SUCCESS,
+                "acme", "agent-1");
+        noop.recordLlmTokens("gpt-4o", 1, 1);
+        noop.recordMapperHit("KeywordMapper", true, "acme");
+        noop.recordDb("mysql", Duration.ofMillis(1), 1, Nl2sqlMetricConstants.OUTCOME_SUCCESS,
+                "acme");
+        try (Nl2sqlMetrics.StageTimer ignored =
+                noop.startStage("mapper", "acme", "agent-1", "NL2SQLParser")) {
+            // no-op
+        }
+
+        assertThat(registry.getMeters()).isEmpty();
     }
 }

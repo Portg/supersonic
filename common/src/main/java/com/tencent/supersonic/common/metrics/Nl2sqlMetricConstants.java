@@ -17,7 +17,7 @@ public final class Nl2sqlMetricConstants {
     public static final String MAPPER_HITS_TOTAL = "s2.nl2sql.mapper.hits.total";
 
     // summary
-    public static final String DB_ROWS_SCANNED = "s2.nl2sql.sql.rows.scanned";
+    public static final String DB_ROWS_RETURNED = "s2.nl2sql.sql.rows.returned";
 
     // outcomes
     public static final String OUTCOME_SUCCESS = "success";

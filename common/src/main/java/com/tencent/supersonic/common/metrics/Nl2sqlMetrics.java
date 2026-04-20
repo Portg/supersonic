@@ -5,23 +5,35 @@ import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
-import lombok.RequiredArgsConstructor;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 @Component
-@ConditionalOnBean(MeterRegistry.class)
-@RequiredArgsConstructor
 public class Nl2sqlMetrics {
 
     private final MeterRegistry registry;
     private final TenantTagNormalizer tenantTagNormalizer;
 
+    @Autowired
+    public Nl2sqlMetrics(ObjectProvider<MeterRegistry> registryProvider,
+            TenantTagNormalizer tenantTagNormalizer) {
+        this(registryProvider.getIfAvailable(), tenantTagNormalizer);
+    }
+
+    public Nl2sqlMetrics(MeterRegistry registry, TenantTagNormalizer tenantTagNormalizer) {
+        this.registry = registry;
+        this.tenantTagNormalizer = tenantTagNormalizer;
+    }
+
     public void recordStage(String stage, Duration duration, String outcome, String tenantId,
             String agentId, String parserName) {
+        if (registry == null) {
+            return;
+        }
         Timer.builder(Nl2sqlMetricConstants.STAGE_DURATION)
                 .tags(baseTags(stage, outcome, tenantId, agentId, parserName)).register(registry)
                 .record(duration);
@@ -36,6 +48,9 @@ public class Nl2sqlMetrics {
 
     public void recordLlmLatency(String model, Duration duration, String outcome, String tenantId,
             String agentId) {
+        if (registry == null) {
+            return;
+        }
         Timer.builder(Nl2sqlMetricConstants.LLM_DURATION)
                 .tags(Tags.of(Nl2sqlMetricConstants.TagKeys.MODEL, safe(model),
                         Nl2sqlMetricConstants.TagKeys.OUTCOME, safe(outcome),
@@ -47,19 +62,29 @@ public class Nl2sqlMetrics {
     }
 
     public void recordLlmTokens(String model, long promptTokens, long completionTokens) {
-        Counter.builder(Nl2sqlMetricConstants.LLM_TOKENS_TOTAL)
-                .tags(Tags.of(Nl2sqlMetricConstants.TagKeys.MODEL, safe(model),
-                        Nl2sqlMetricConstants.TagKeys.KIND, "prompt",
-                        Nl2sqlMetricConstants.TagKeys.MODULE, Nl2sqlMetricConstants.MODULE))
-                .register(registry).increment(promptTokens);
-        Counter.builder(Nl2sqlMetricConstants.LLM_TOKENS_TOTAL)
-                .tags(Tags.of(Nl2sqlMetricConstants.TagKeys.MODEL, safe(model),
-                        Nl2sqlMetricConstants.TagKeys.KIND, "completion",
-                        Nl2sqlMetricConstants.TagKeys.MODULE, Nl2sqlMetricConstants.MODULE))
-                .register(registry).increment(completionTokens);
+        if (registry == null) {
+            return;
+        }
+        if (promptTokens > 0) {
+            Counter.builder(Nl2sqlMetricConstants.LLM_TOKENS_TOTAL)
+                    .tags(Tags.of(Nl2sqlMetricConstants.TagKeys.MODEL, safe(model),
+                            Nl2sqlMetricConstants.TagKeys.KIND, "prompt",
+                            Nl2sqlMetricConstants.TagKeys.MODULE, Nl2sqlMetricConstants.MODULE))
+                    .register(registry).increment(promptTokens);
+        }
+        if (completionTokens > 0) {
+            Counter.builder(Nl2sqlMetricConstants.LLM_TOKENS_TOTAL)
+                    .tags(Tags.of(Nl2sqlMetricConstants.TagKeys.MODEL, safe(model),
+                            Nl2sqlMetricConstants.TagKeys.KIND, "completion",
+                            Nl2sqlMetricConstants.TagKeys.MODULE, Nl2sqlMetricConstants.MODULE))
+                    .register(registry).increment(completionTokens);
+        }
     }
 
     public void recordMapperHit(String mapperName, boolean hit, String tenantId) {
+        if (registry == null) {
+            return;
+        }
         Counter.builder(Nl2sqlMetricConstants.MAPPER_HITS_TOTAL)
                 .tags(Tags.of(Nl2sqlMetricConstants.TagKeys.MAPPER, safe(mapperName),
                         Nl2sqlMetricConstants.TagKeys.HIT, String.valueOf(hit),
@@ -69,8 +94,11 @@ public class Nl2sqlMetrics {
                 .register(registry).increment();
     }
 
-    public void recordDb(String dbType, Duration duration, long rowsScanned, String outcome,
+    public void recordDb(String dbType, Duration duration, long rowsReturned, String outcome,
             String tenantId) {
+        if (registry == null) {
+            return;
+        }
         Timer.builder(Nl2sqlMetricConstants.DB_DURATION)
                 .tags(Tags.of(Nl2sqlMetricConstants.TagKeys.DB_TYPE, safe(dbType),
                         Nl2sqlMetricConstants.TagKeys.OUTCOME, safe(outcome),
@@ -78,11 +106,11 @@ public class Nl2sqlMetrics {
                         tenantTagNormalizer.normalize(tenantId),
                         Nl2sqlMetricConstants.TagKeys.MODULE, Nl2sqlMetricConstants.MODULE))
                 .register(registry).record(duration);
-        if (rowsScanned >= 0) {
-            DistributionSummary.builder(Nl2sqlMetricConstants.DB_ROWS_SCANNED)
+        if (rowsReturned >= 0) {
+            DistributionSummary.builder(Nl2sqlMetricConstants.DB_ROWS_RETURNED)
                     .tags(Tags.of(Nl2sqlMetricConstants.TagKeys.DB_TYPE, safe(dbType),
                             Nl2sqlMetricConstants.TagKeys.MODULE, Nl2sqlMetricConstants.MODULE))
-                    .register(registry).record(rowsScanned);
+                    .register(registry).record(rowsReturned);
         }
     }
 
@@ -146,6 +174,9 @@ public class Nl2sqlMetrics {
                 return;
             }
             stopped = true;
+            if (owner.registry == null) {
+                return;
+            }
             Duration d = Duration.ofNanos(System.nanoTime() - startNanos);
             Tags tags = owner.baseTags(stage, outcome, tenantId, agentId, parserName);
             if (mapperName != null) {

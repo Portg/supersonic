@@ -48,6 +48,8 @@ public final class QueryTraceContext {
         String v = snapshot.get(KEY);
         if (v != null) {
             MDC.put(KEY, v);
+        } else {
+            MDC.remove(KEY);
         }
     }
 

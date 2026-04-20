@@ -57,12 +57,12 @@ public class JdbcExecutor implements QueryExecutor {
         long startNanos = System.nanoTime();
         String outcome =
                 com.tencent.supersonic.common.metrics.Nl2sqlMetricConstants.OUTCOME_SUCCESS;
-        long rowsScanned = -1;
+        long rowsReturned = -1;
         try {
             SqlUtils sqlUtil = sqlUtils.init(database);
             sqlUtil.queryInternal(queryStatement.getSql(), queryResultWithColumns);
             queryResultWithColumns.setSql(sql);
-            rowsScanned = queryResultWithColumns.getResultList() == null ? 0
+            rowsReturned = queryResultWithColumns.getResultList() == null ? 0
                     : queryResultWithColumns.getResultList().size();
         } catch (TooManyRequestsException e) {
             throw e;
@@ -73,7 +73,7 @@ public class JdbcExecutor implements QueryExecutor {
         } finally {
             java.time.Duration elapsed = java.time.Duration.ofNanos(System.nanoTime() - startNanos);
             if (metrics != null) {
-                metrics.recordDb(dbType, elapsed, rowsScanned, outcome, tenantId);
+                metrics.recordDb(dbType, elapsed, rowsReturned, outcome, tenantId);
             }
         }
         return queryResultWithColumns;

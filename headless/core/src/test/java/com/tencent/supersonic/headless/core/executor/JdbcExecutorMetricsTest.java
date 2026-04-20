@@ -24,7 +24,7 @@ class JdbcExecutorMetricsTest {
 
         assertThat(registry.find(Nl2sqlMetricConstants.DB_DURATION).tag("db_type", "mysql").timer())
                 .isNotNull();
-        assertThat(registry.find(Nl2sqlMetricConstants.DB_ROWS_SCANNED).tag("db_type", "mysql")
+        assertThat(registry.find(Nl2sqlMetricConstants.DB_ROWS_RETURNED).tag("db_type", "mysql")
                 .summary().totalAmount()).isEqualTo(2048);
     }
 }

@@ -13,7 +13,7 @@ Alert rules: `docker/prometheus/rules/nl2sql-slo-alert-rules.yml`.
 | `s2_nl2sql_llm_tokens_total` | counter | model, kind (prompt/completion) | token usage |
 | `s2_nl2sql_mapper_hits_total` | counter | mapper_name, hit (true/false) | mapper effectiveness |
 | `s2_nl2sql_db_duration_seconds` | histogram | db_type, outcome | DB execution latency |
-| `s2_nl2sql_sql_rows_scanned` | summary | db_type | rows scanned per SQL |
+| `s2_nl2sql_sql_rows_returned` | summary | db_type | rows returned per SQL |
 
 ## Alert response — `Nl2sqlStageP99High`
 

@@ -47,4 +47,14 @@ class QueryTraceContextTest {
             assertThat(MDC.get(QueryTraceContext.KEY)).isEqualTo(outer.traceId());
         }
     }
+
+    @Test
+    void restoreWithoutTraceClearsExistingTrace() {
+        Map<String, String> snap = QueryTraceContext.snapshot();
+        MDC.put(QueryTraceContext.KEY, "stale");
+
+        QueryTraceContext.restore(snap);
+
+        assertThat(MDC.get(QueryTraceContext.KEY)).isNull();
+    }
 }

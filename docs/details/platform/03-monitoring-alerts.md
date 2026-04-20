@@ -60,7 +60,7 @@ management:
 | `s2_nl2sql_llm_tokens_total` | Counter | `model`, `kind` (prompt/completion) | LLM Token 消耗 |
 | `s2_nl2sql_mapper_hits_total` | Counter | `mapper_name`, `hit` | 各 Mapper 策略命中计数 |
 | `s2_nl2sql_db_duration_seconds` | Histogram | `db_type`, `outcome` | DB 执行时延 |
-| `s2_nl2sql_sql_rows_scanned` | Summary | `db_type` | 单次 SQL 扫描行数 |
+| `s2_nl2sql_sql_rows_returned` | Summary | `db_type` | 单次 SQL 返回行数 |
 
 ### 2.3 多租户指标隔离
 

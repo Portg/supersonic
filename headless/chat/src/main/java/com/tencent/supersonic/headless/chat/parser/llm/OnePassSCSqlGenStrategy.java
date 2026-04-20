@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static com.tencent.supersonic.headless.chat.parser.ParserConfig.PARSER_FORMAT_JSON_TYPE;
 
@@ -88,6 +89,7 @@ public class OnePassSCSqlGenStrategy extends SqlGenStrategy {
             return llmResp;
         }
         ChatModelConfig chatModelConfig = chatApp.getChatModelConfig();
+        llmResp.setModelName(chatModelConfig.getModelName());
         if (!StringUtils.isBlank(parserConfig.getParameterValue(PARSER_FORMAT_JSON_TYPE))) {
             chatModelConfig.setJsonFormat(true);
             chatModelConfig
@@ -103,17 +105,23 @@ public class OnePassSCSqlGenStrategy extends SqlGenStrategy {
             Prompt prompt = generatePrompt(llmReq, llmResp, chatApp);
             prompt2Exemplar.put(prompt, exemplars);
         }
+        llmResp.setPromptTokens(prompt2Exemplar.keySet().stream().map(Prompt::text)
+                .mapToLong(this::estimateTokens).sum());
 
         // 3.perform multiple self-consistency inferences parallelly
         Map<String, Prompt> output2Prompt = new ConcurrentHashMap<>();
+        AtomicLong completionTokens = new AtomicLong();
         prompt2Exemplar.keySet().parallelStream().forEach(prompt -> {
             SemanticSql s2Sql = extractor.generateSemanticSql(prompt.toUserMessage().singleText());
             if (s2Sql != null && s2Sql.getSql() != null) {
                 output2Prompt.put(s2Sql.getSql(), prompt);
+                completionTokens.addAndGet(
+                        estimateTokens(s2Sql.getThought()) + estimateTokens(s2Sql.getSql()));
             }
             keyPipelineLog.info("OnePassSCSqlGenStrategy modelReq:\n{} \nmodelResp:\n{}",
                     prompt.text(), s2Sql);
         });
+        llmResp.setCompletionTokens(completionTokens.get());
 
         // 4.format response.
         if (output2Prompt.isEmpty()) {
@@ -152,6 +160,13 @@ public class OnePassSCSqlGenStrategy extends SqlGenStrategy {
         // use custom prompt template if provided.
         String promptTemplate = chatApp.getPrompt();
         return PromptTemplate.from(promptTemplate).apply(variable);
+    }
+
+    private long estimateTokens(String text) {
+        if (StringUtils.isBlank(text)) {
+            return 0;
+        }
+        return Math.max(1, Math.round(text.length() / 4.0));
     }
 
     @Override

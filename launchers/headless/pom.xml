@@ -74,6 +74,12 @@
             <artifactId>postgresql</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>net.logstash.logback</groupId>
+            <artifactId>logstash-logback-encoder</artifactId>
+            <version>7.4</version>
+        </dependency>
+
         <!-- Runtime backends for s2.storage.type=oss/s3. They are optional in common, so
              launchers must include them explicitly when packaging the application. -->
         <dependency>

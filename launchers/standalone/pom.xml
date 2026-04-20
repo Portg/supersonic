@@ -140,6 +140,13 @@
             <artifactId>auth-api</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- ArchUnit: module boundary enforcement -->
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit-junit5</artifactId>
+            <version>1.3.0</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>

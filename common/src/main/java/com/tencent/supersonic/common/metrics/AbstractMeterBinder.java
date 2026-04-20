@@ -4,6 +4,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.binder.MeterBinder;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 
@@ -17,6 +18,8 @@ import org.springframework.lang.NonNull;
  * For purely dynamic metrics classes, {@code doBindTo} may be an empty body.
  */
 public abstract class AbstractMeterBinder implements MeterBinder {
+
+    protected final Logger logger = LoggerFactory.getLogger(getClass());
 
     private final Iterable<Tag> tags;
     private volatile MeterRegistry registry;
@@ -38,8 +41,7 @@ public abstract class AbstractMeterBinder implements MeterBinder {
         try {
             doBindTo(registry);
         } catch (Exception e) {
-            LoggerFactory.getLogger(getClass()).warn("Failed to bind metrics: {}", e.getMessage(),
-                    e);
+            logger.warn("Failed to bind metrics: {}", e.getMessage(), e);
         }
     }
 

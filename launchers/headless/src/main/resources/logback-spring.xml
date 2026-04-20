@@ -29,7 +29,7 @@
         <!--日志输出编码格式化-->
         <encoder>
             <charset>UTF-8</charset>
-            <pattern>%d [%thread] %-5level [%X{traceId}] %logger{36} %line - %msg%n</pattern>
+            <pattern>%d [%thread] %-5level [traceId=%X{traceId} queryTraceId=%X{queryTraceId}] %logger{36} %line - %msg%n</pattern>
         </encoder>
     </appender>
 
@@ -56,7 +56,7 @@
         <!--日志输出编码格式化-->
         <encoder>
             <charset>UTF-8</charset>
-            <pattern>%d [%thread] %-5level [%X{traceId}] %logger{36} %line - %msg%n</pattern>
+            <pattern>%d [%thread] %-5level [traceId=%X{traceId} queryTraceId=%X{queryTraceId}] %logger{36} %line - %msg%n</pattern>
         </encoder>
     </appender>
 
@@ -79,13 +79,34 @@
         <!--日志输出编码格式化-->
         <encoder>
             <charset>UTF-8</charset>
-            <pattern>%d [%thread] %-5level [%X{traceId}] %logger{36} %line - %msg%n</pattern>
+            <pattern>%d [%thread] %-5level [traceId=%X{traceId} queryTraceId=%X{queryTraceId}] %logger{36} %line - %msg%n</pattern>
         </encoder>
     </appender>
 
     <logger name="com.tencent.supersonic" level="INFO" additivity="true">
         <appender-ref ref="serviceLog"/>
     </logger>
+
+    <appender name="jsonLog" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <File>${LOG_PATH}/s2-json.log</File>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <FileNamePattern>${LOG_PATH}/s2-json.%d{yyyy-MM-dd}.log.gz</FileNamePattern>
+            <maxHistory>14</maxHistory>
+        </rollingPolicy>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeMdcKeyName>traceId</includeMdcKeyName>
+            <includeMdcKeyName>queryTraceId</includeMdcKeyName>
+            <includeMdcKeyName>tenantId</includeMdcKeyName>
+            <fieldNames>
+                <timestamp>@timestamp</timestamp>
+                <message>message</message>
+                <thread>thread</thread>
+                <logger>logger</logger>
+                <level>level</level>
+            </fieldNames>
+            <customFields>{"application":"supersonic"}</customFields>
+        </encoder>
+    </appender>
 
     <!-- 业务日志输出 -->
     <appender name="keyPipelineAppender" class="ch.qos.logback.server.rolling.RollingFileAppender">
@@ -100,7 +121,7 @@
         </rollingPolicy>
         <encoder>
             <charset>UTF-8</charset>
-            <pattern>%d [%thread] %-5level [%X{traceId}] %logger{36} %line - %msg%n</pattern>
+            <pattern>%d [%thread] %-5level [traceId=%X{traceId} queryTraceId=%X{queryTraceId}] %logger{36} %line - %msg%n</pattern>
         </encoder>
         <filter class="ch.qos.logback.classic.filter.LevelFilter">
             <!-- 过滤的级别 -->
@@ -116,5 +137,6 @@
         <appender-ref ref="fileInfoLog"/>
         <appender-ref ref="fileErrorLog"/>
         <appender-ref ref="consoleLog"/>
+        <appender-ref ref="jsonLog"/>
     </root>
 </configuration>

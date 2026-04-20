@@ -32,19 +32,37 @@ public abstract class BaseMapper implements SchemaMapper {
         }
 
         String simpleName = this.getClass().getSimpleName();
-        long startTime = System.currentTimeMillis();
+
+        com.tencent.supersonic.common.metrics.Nl2sqlMetrics metrics =
+                com.tencent.supersonic.common.util.ContextUtils
+                        .getBean(com.tencent.supersonic.common.metrics.Nl2sqlMetrics.class);
+        String tenantId;
+        try {
+            Long tid = com.tencent.supersonic.common.context.TenantContext.getTenantId();
+            tenantId = tid != null ? String.valueOf(tid) : null;
+        } catch (Throwable ignore) {
+            tenantId = null;
+        }
+
         log.debug("before {},mapInfo:{}", simpleName,
                 chatQueryContext.getMapInfo().getDataSetElementMatches());
 
-        try {
-            doMap(chatQueryContext);
-            MapFilter.filter(chatQueryContext);
-        } catch (Exception e) {
-            log.error("work error", e);
+        int matchesBefore = chatQueryContext.getMapInfo().getDataSetElementMatches().size();
+        try (com.tencent.supersonic.common.metrics.Nl2sqlMetrics.StageTimer t = metrics
+                .startStage("mapper", tenantId, "unknown", "NL2SQLParser").markMapper(simpleName)) {
+            try {
+                doMap(chatQueryContext);
+                MapFilter.filter(chatQueryContext);
+                int matchesAfter = chatQueryContext.getMapInfo().getDataSetElementMatches().size();
+                boolean hit = matchesAfter > matchesBefore;
+                metrics.recordMapperHit(simpleName, hit, tenantId);
+            } catch (Exception e) {
+                t.failed(com.tencent.supersonic.common.metrics.Nl2sqlMetricConstants.OUTCOME_ERROR);
+                log.error("work error", e);
+            }
         }
 
-        long cost = System.currentTimeMillis() - startTime;
-        log.debug("after {},cost:{},mapInfo:{}", simpleName, cost,
+        log.debug("after {},mapInfo:{}", simpleName,
                 chatQueryContext.getMapInfo().getDataSetElementMatches());
     }
 

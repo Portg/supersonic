@@ -1,0 +1,67 @@
+groups:
+  - name: nl2sql-slo
+    rules:
+      - alert: Nl2sqlStageP99High
+        expr: |
+          histogram_quantile(0.99,
+            sum by (le, stage) (rate(s2_nl2sql_stage_duration_seconds_bucket[10m]))
+          ) > 15
+        for: 10m
+        labels:
+          severity: warning
+          module: nl2sql
+        annotations:
+          summary: "NL2SQL {{ $labels.stage }} P99 latency exceeds 15s"
+          description: "Stage {{ $labels.stage }} P99 latency has exceeded 15s for 10 minutes. Check LLM provider latency, mapper load, or DB contention. Dashboard: /d/s2-nl2sql/supersonic-nl2sql-chain-observability"
+
+      - alert: Nl2sqlErrorRateHigh
+        expr: |
+          (
+            sum by (stage) (rate(s2_nl2sql_stage_outcome_total{outcome="error"}[10m]))
+            /
+            clamp_min(sum by (stage) (rate(s2_nl2sql_stage_outcome_total[10m])), 0.0001)
+          ) > 0.05
+        for: 10m
+        labels:
+          severity: critical
+          module: nl2sql
+        annotations:
+          summary: "NL2SQL {{ $labels.stage }} error rate exceeds 5%"
+          description: "Stage {{ $labels.stage }} error rate is above 5% for 10 minutes. Check logs with queryTraceId; common causes: LLM rate limit, schema drift, DB outage."
+
+      - alert: Nl2sqlLlmLatencyP95High
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le, model) (rate(s2_nl2sql_llm_duration_seconds_bucket[10m]))
+          ) > 20
+        for: 10m
+        labels:
+          severity: warning
+          module: nl2sql
+        annotations:
+          summary: "NL2SQL LLM {{ $labels.model }} P95 latency exceeds 20s"
+          description: "LLM provider {{ $labels.model }} is slow. Consider retry threshold reduction or failover."
+
+      - alert: Nl2sqlLlmTokenSpike
+        expr: |
+          sum by (model) (rate(s2_nl2sql_llm_tokens_total[10m])) > 100000
+        for: 15m
+        labels:
+          severity: warning
+          module: nl2sql
+        annotations:
+          summary: "NL2SQL token consumption spiking for {{ $labels.model }}"
+          description: "Token rate > 100k/s for 15 minutes. Likely prompt bloat or runaway retry loop. Dashboard: /d/s2-nl2sql"
+
+      - alert: Nl2sqlDbStageP99High
+        expr: |
+          histogram_quantile(0.99,
+            sum by (le, db_type) (rate(s2_nl2sql_db_duration_seconds_bucket[10m]))
+          ) > 10
+        for: 10m
+        labels:
+          severity: warning
+          module: nl2sql
+        annotations:
+          summary: "NL2SQL DB {{ $labels.db_type }} P99 exceeds 10s"
+          description: "Downstream DB slow. Check DB engine health and connection pool."

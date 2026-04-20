@@ -35,9 +35,19 @@ public class ComponentFactory {
     }
 
     public static List<SemanticCorrector> getSemanticCorrectors() {
-        return CollectionUtils.isEmpty(semanticCorrectors)
-                ? init(SemanticCorrector.class, semanticCorrectors)
-                : semanticCorrectors;
+        if (CollectionUtils.isEmpty(semanticCorrectors)) {
+            init(SemanticCorrector.class, semanticCorrectors);
+            com.tencent.supersonic.common.metrics.Nl2sqlMetrics nl2sqlMetrics =
+                    ContextUtils.getBean(com.tencent.supersonic.common.metrics.Nl2sqlMetrics.class);
+            if (nl2sqlMetrics != null) {
+                semanticCorrectors = semanticCorrectors.stream().filter(
+                        c -> !(c instanceof com.tencent.supersonic.headless.chat.corrector.CorrectorMetricsDecorator))
+                        .map(c -> (SemanticCorrector) new com.tencent.supersonic.headless.chat.corrector.CorrectorMetricsDecorator(
+                                c, c.getClass().getSimpleName(), nl2sqlMetrics))
+                        .collect(java.util.stream.Collectors.toList());
+            }
+        }
+        return semanticCorrectors;
     }
 
     public static DataSetResolver getModelResolver() {

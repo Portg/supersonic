@@ -29,8 +29,8 @@ public class CostEstimatorImpl implements CostEstimator {
         if (provider == null || model == null) {
             return 0L;
         }
-        String key = provider + "::" + model;
-        Optional<LlmPricingDO> pricing = cache.get(key, k -> load(provider, model));
+        Optional<LlmPricingDO> pricing =
+                cache.get(key(provider, model), k -> load(provider, model));
         if (pricing.isEmpty()) {
             log.warn("No pricing entry for provider={} model={}; storing cost=0", provider, model);
             return 0L;
@@ -41,11 +41,28 @@ public class CostEstimatorImpl implements CostEstimator {
         return inMicros + outMicros;
     }
 
+    @Override
+    public void refresh(String provider, String model) {
+        if (provider == null || provider.isBlank() || model == null || model.isBlank()) {
+            return;
+        }
+        cache.invalidate(key(provider, model));
+    }
+
+    @Override
+    public void refreshAll() {
+        cache.invalidateAll();
+    }
+
     private Optional<LlmPricingDO> load(String provider, String model) {
         LambdaQueryWrapper<LlmPricingDO> w = new LambdaQueryWrapper<>();
         w.eq(LlmPricingDO::getProvider, provider).eq(LlmPricingDO::getModel, model)
                 .orderByDesc(LlmPricingDO::getEffectiveFrom).last("LIMIT 1");
         List<LlmPricingDO> list = mapper.selectList(w);
         return list.isEmpty() ? Optional.empty() : Optional.of(list.get(0));
+    }
+
+    private String key(String provider, String model) {
+        return provider + "::" + model;
     }
 }

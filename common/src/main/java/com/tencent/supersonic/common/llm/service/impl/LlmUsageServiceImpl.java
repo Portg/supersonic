@@ -7,7 +7,6 @@ import com.tencent.supersonic.common.llm.persistence.dataobject.LlmUsageDO;
 import com.tencent.supersonic.common.llm.persistence.mapper.LlmUsageDOMapper;
 import com.tencent.supersonic.common.llm.service.LlmUsageService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,12 +16,12 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class LlmUsageServiceImpl implements LlmUsageService {
 
     private final LlmUsageDOMapper mapper;
+    private static final int BATCH_SIZE = 500;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -30,13 +29,9 @@ public class LlmUsageServiceImpl implements LlmUsageService {
         if (records == null || records.isEmpty()) {
             return;
         }
-        if (records.size() > 50) {
-            log.warn(
-                    "LlmUsageServiceImpl.batchInsert: inserting {} records individually - consider batch SQL",
-                    records.size());
-        }
-        for (LlmUsageDO r : records) {
-            mapper.insert(r);
+        for (int from = 0; from < records.size(); from += BATCH_SIZE) {
+            int to = Math.min(from + BATCH_SIZE, records.size());
+            mapper.batchInsert(records.subList(from, to));
         }
     }
 

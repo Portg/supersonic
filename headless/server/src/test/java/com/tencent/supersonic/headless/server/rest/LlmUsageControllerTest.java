@@ -2,6 +2,7 @@ package com.tencent.supersonic.headless.server.rest;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.tencent.supersonic.auth.api.authentication.service.UserService;
+import com.tencent.supersonic.common.llm.CostEstimator;
 import com.tencent.supersonic.common.llm.persistence.dataobject.LlmUsageDO;
 import com.tencent.supersonic.common.llm.service.LlmUsageService;
 import com.tencent.supersonic.common.pojo.User;
@@ -18,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class LlmUsageControllerTest {
@@ -38,6 +40,10 @@ class LlmUsageControllerTest {
                 .permissions(List.of("PLATFORM_ADMIN")).build();
     }
 
+    private static CostEstimator costEstimator() {
+        return mock(CostEstimator.class);
+    }
+
     @Test
     void queryReturnsPagedResults() throws Exception {
         LlmUsageService svc = mock(LlmUsageService.class);
@@ -51,7 +57,7 @@ class LlmUsageControllerTest {
         page.setTotal(1);
         when(svc.query(eq(7L), any(), any(), isNull(), isNull(), eq(1), eq(20))).thenReturn(page);
 
-        buildMvc(new LlmUsageController(svc, userService(platformAdmin())))
+        buildMvc(new LlmUsageController(svc, costEstimator(), userService(platformAdmin())))
                 .perform(get("/api/semantic/admin/llm-usage").param("tenantId", "7")
                         .param("from", "2026-04-01").param("to", "2026-04-17")
                         .accept(MediaType.APPLICATION_JSON))
@@ -66,7 +72,7 @@ class LlmUsageControllerTest {
         when(svc.dailyAggregates(eq(7L), any(), any()))
                 .thenReturn(List.of(Map.of("day", "2026-04-15", "tokens", 1000L, "cost", 123L)));
 
-        buildMvc(new LlmUsageController(svc, userService(platformAdmin())))
+        buildMvc(new LlmUsageController(svc, costEstimator(), userService(platformAdmin())))
                 .perform(get("/api/semantic/admin/llm-usage/daily").param("tenantId", "7")
                         .param("from", "2026-04-01").param("to", "2026-04-17")
                         .accept(MediaType.APPLICATION_JSON))
@@ -79,10 +85,40 @@ class LlmUsageControllerTest {
         User user = User.builder().id(2L).name("tenant-admin").tenantId(8L)
                 .permissions(List.of("TENANT_USAGE_VIEW")).build();
 
-        MockMvc mvc = buildMvc(new LlmUsageController(svc, userService(user)));
+        MockMvc mvc = buildMvc(new LlmUsageController(svc, costEstimator(), userService(user)));
         assertThatThrownBy(() -> mvc.perform(get("/api/semantic/admin/llm-usage")
                 .param("tenantId", "7").accept(MediaType.APPLICATION_JSON)))
                         .hasRootCauseInstanceOf(IllegalAccessException.class);
         verifyNoInteractions(svc);
+    }
+
+    @Test
+    void platformAdminCanRefreshSinglePricingCacheEntry() throws Exception {
+        LlmUsageService svc = mock(LlmUsageService.class);
+        CostEstimator estimator = costEstimator();
+
+        buildMvc(new LlmUsageController(svc, estimator, userService(platformAdmin())))
+                .perform(post("/api/semantic/admin/llm-usage/pricing-cache:refresh")
+                        .param("provider", "OPEN_AI").param("model", "gpt-4o-mini")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.refreshed").value("one"))
+                .andExpect(jsonPath("$.provider").value("OPEN_AI"))
+                .andExpect(jsonPath("$.model").value("gpt-4o-mini"));
+        verify(estimator).refresh("OPEN_AI", "gpt-4o-mini");
+    }
+
+    @Test
+    void tenantUserCannotRefreshPricingCache() {
+        LlmUsageService svc = mock(LlmUsageService.class);
+        CostEstimator estimator = costEstimator();
+        User user = User.builder().id(2L).name("tenant-admin").tenantId(8L)
+                .permissions(List.of("TENANT_USAGE_VIEW")).build();
+
+        MockMvc mvc = buildMvc(new LlmUsageController(svc, estimator, userService(user)));
+        assertThatThrownBy(
+                () -> mvc.perform(post("/api/semantic/admin/llm-usage/pricing-cache:refresh")
+                        .accept(MediaType.APPLICATION_JSON)))
+                                .hasRootCauseInstanceOf(IllegalAccessException.class);
+        verifyNoInteractions(estimator);
     }
 }

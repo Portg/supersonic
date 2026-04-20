@@ -1,5 +1,6 @@
 package com.tencent.supersonic.common.quota;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -8,8 +9,12 @@ import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class TenantQuotaFilter implements Filter {
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
@@ -45,9 +50,12 @@ public class TenantQuotaFilter implements Filter {
         http.setStatus(429);
         http.setHeader("Retry-After", String.valueOf(retryAfterSeconds));
         http.setContentType("application/json;charset=UTF-8");
-        http.getWriter()
-                .write("{\"code\":429,\"status\":\"TOO_MANY_REQUESTS\",\"tenantId\":" + tenantId
-                        + ",\"retryAfterSeconds\":" + retryAfterSeconds
-                        + ",\"msg\":\"Tenant concurrency quota exceeded\"}");
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("code", 429);
+        body.put("status", "TOO_MANY_REQUESTS");
+        body.put("tenantId", tenantId);
+        body.put("retryAfterSeconds", retryAfterSeconds);
+        body.put("msg", "Tenant concurrency quota exceeded");
+        OBJECT_MAPPER.writeValue(http.getWriter(), body);
     }
 }

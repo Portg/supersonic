@@ -69,6 +69,61 @@ paths:
       summary: 查询 Agent 列表
       tags: [Agent]
 
+  # --- LLM 用量（管理员）---
+  /admin/llm-usage:
+    get:
+      summary: 查询 LLM 用量明细（平台管理员或租户管理员）
+      tags: [LlmUsage]
+      parameters:
+        - name: tenantId
+          in: query
+          schema: { type: integer }
+        - name: startDate
+          in: query
+          schema: { type: string, format: date }
+        - name: endDate
+          in: query
+          schema: { type: string, format: date }
+        - name: callType
+          in: query
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, default: 20 }
+
+  /admin/llm-usage/daily-aggregates:
+    get:
+      summary: 查询按天聚合的 LLM 用量（按 tenantId+callType 分组）
+      tags: [LlmUsage]
+      parameters:
+        - name: tenantId
+          in: query
+          schema: { type: integer }
+        - name: startDate
+          in: query
+          schema: { type: string, format: date }
+        - name: endDate
+          in: query
+          schema: { type: string, format: date }
+
+  /admin/llm-usage/total-tokens:
+    get:
+      summary: 查询指定时间范围内的 token 总量
+      tags: [LlmUsage]
+      parameters:
+        - name: tenantId
+          in: query
+          schema: { type: integer }
+        - name: startDate
+          in: query
+          schema: { type: string, format: date }
+        - name: endDate
+          in: query
+          schema: { type: string, format: date }
+
   # --- 认证层 ---
   /user/login:
     post:
@@ -82,3 +137,37 @@ paths:
     get:
       summary: 查询角色列表
       tags: [Role]
+
+servers:
+  - url: /api/v1
+    description: 平台管理 API（v1）
+
+paths_v1:
+  # --- 租户配额（管理员）---
+  /admin/tenant-quotas:
+    get:
+      summary: 查询全部租户配额配置（平台管理员）
+      tags: [TenantQuota]
+
+  /admin/tenant-quotas/{tenantId}:
+    get:
+      summary: 查询指定租户配额
+      tags: [TenantQuota]
+    put:
+      summary: 创建或更新租户配额（upsert）
+      tags: [TenantQuota]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [jdbcConcurrent, enabled]
+              properties:
+                jdbcConcurrent: { type: integer, minimum: 1 }
+                llmConcurrent: { type: integer, minimum: 1 }
+                acquireTimeoutMs: { type: integer, minimum: 1 }
+                monthlyQueryCount: { type: integer, minimum: 0 }
+                enabled: { type: boolean }
+    delete:
+      summary: 删除租户配额配置（恢复全局默认）
+      tags: [TenantQuota]

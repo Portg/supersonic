@@ -14,7 +14,7 @@ import static org.mockito.Mockito.*;
 class LlmUsageServiceImplTest {
 
     @Test
-    void batchInsertDelegatesToMapperPerRow() {
+    void batchInsertDelegatesToMapperBatch() {
         LlmUsageDOMapper mapper = mock(LlmUsageDOMapper.class);
         LlmUsageServiceImpl svc = new LlmUsageServiceImpl(mapper);
 
@@ -27,9 +27,9 @@ class LlmUsageServiceImplTest {
 
         svc.batchInsert(List.of(a, b));
 
-        ArgumentCaptor<LlmUsageDO> captor = ArgumentCaptor.forClass(LlmUsageDO.class);
-        verify(mapper, times(2)).insert(captor.capture());
-        assertThat(captor.getAllValues()).containsExactly(a, b);
+        ArgumentCaptor<List<LlmUsageDO>> captor = ArgumentCaptor.forClass(List.class);
+        verify(mapper).batchInsert(captor.capture());
+        assertThat(captor.getValue()).containsExactly(a, b);
     }
 
     @Test

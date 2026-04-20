@@ -26,20 +26,22 @@ ArchUnit 在 `mvn test` 阶段就让构建失败，把"模块边界"从团队约
 
 | # | 规则 | 目的 |
 |---|------|------|
-| 1 | `headless.api` 禁依赖 `headless.server` | DTO/契约不能反向依赖持久化实现 |
-| 2 | 所有 `*.api` 禁依赖 `*.server` | 通用版本，适用于 chat/feishu/billing/headless |
+| 1 | `headless.api` 禁依赖 `headless.server` | DTO/契约不能反向依赖持久化实现（Rule 2 的子集，保留用于文档可发现性） |
+| 2 | 所有 `*.api` 禁依赖 `*.server` / `auth.authentication` / `auth.authorization` | 通用版本，适用于 chat/feishu/billing/headless；auth 用 authentication/authorization 作为实现包 |
 | 3 | `auth.api` 禁依赖 `auth.authentication` / `auth.authorization` | auth 模块契约分离 |
-| 4 | `feishu.server` 禁依赖 `chat.server` / `headless.server` | 飞书作为投递渠道，只能消费 `.api` |
-| 5 | `chat.server` 禁依赖 `feishu.server` | 跨模块通知走 Spring `ApplicationEvent` |
-| 6 | `common` 禁依赖任何同级模块 | `common` 必须是纯基础设施 |
-| 7 | `*.api` 类禁用 Spring `@Component/@Service/@Repository/@Controller/@RestController` | API 是纯契约 |
-| 8 | 顶级模块切片间无循环依赖 | 由 `slices().beFreeOfCycles()` 兜底 |
+| 4 | `chat.server` 禁依赖 `headless.server` | chat 只能通过 headless-api/headless-chat/headless-core 消费能力 |
+| 5 | `headless.chat` 禁依赖 `headless.server` | 语义解析逻辑不能反向依赖服务端持久化实现 |
+| 6 | `feishu.server` 禁依赖其他模块的 server 内部实现 | 飞书作为投递渠道，只能消费公开 `.api` 契约（黑名单：chat/headless/billing/auth 实现层） |
+| 7 | `chat.server` 禁依赖 `feishu.server` | 跨模块通知走 Spring `ApplicationEvent` |
+| 8 | `common` 禁依赖任何同级模块 | `common` 必须是纯基础设施 |
+| 9 | `*.api` 类禁用 Spring `@Component/@Service/@Repository/@Controller/@RestController/@Configuration/@ControllerAdvice/@RestControllerAdvice` | API 是纯契约，不能携带 Spring 托管逻辑 |
+| 10 | 顶级模块切片间无循环依赖 | 由 `slices().beFreeOfCycles()` 兜底 |
 
 ## 3. 运行方式
 
 本地：
 ```bash
-mvn test -pl launchers/standalone -Dtest=ModuleBoundaryTest
+mvn -pl launchers/standalone -am -Dtest=ArchUnitSmokeTest,ModuleBoundaryTest -Dsurefire.failIfNoSpecifiedTests=false test
 ```
 
 CI：`.github/workflows/ubuntu-ci.yml` 在 push / PR 到 `master` 时执行 `mvn test`，
@@ -72,6 +74,6 @@ static final ArchRule xxx_shouldNotDependOn_yyy =
 
 ### 注意事项
 
-规则 #6（`common` 禁依赖同级模块）使用完整包名 `com.tencent.supersonic.*` 而非
+规则 #8（`common` 禁依赖同级模块）使用完整包名 `com.tencent.supersonic.*` 而非
 `..auth..` 等短模式，以避免误匹配第三方库（如 `software.amazon.awssdk.auth.*`）。
 新增类似规则时请遵循同样做法。

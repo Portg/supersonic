@@ -16,8 +16,8 @@ class LLMRequestServiceMetricsTest {
     @Test
     void recordingLlmMetricsAddsLatencyAndTokenCounters() {
         SimpleMeterRegistry registry = new SimpleMeterRegistry();
-        Nl2sqlMetrics metrics =
-                new Nl2sqlMetrics(registry, new TenantTagNormalizer(List.of(), 10, true));
+        Nl2sqlMetrics metrics = new Nl2sqlMetrics(new TenantTagNormalizer(List.of(), 10, true));
+        metrics.bindTo(registry);
 
         LLMResp resp = new LLMResp();
         resp.setModelName("gpt-4o");

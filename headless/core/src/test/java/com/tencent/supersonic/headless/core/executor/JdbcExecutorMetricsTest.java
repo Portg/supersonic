@@ -16,8 +16,8 @@ class JdbcExecutorMetricsTest {
     @Test
     void recordDbPublishesTimerAndSummary() {
         SimpleMeterRegistry registry = new SimpleMeterRegistry();
-        Nl2sqlMetrics metrics =
-                new Nl2sqlMetrics(registry, new TenantTagNormalizer(List.of(), 10, true));
+        Nl2sqlMetrics metrics = new Nl2sqlMetrics(new TenantTagNormalizer(List.of(), 10, true));
+        metrics.bindTo(registry);
 
         metrics.recordDb("mysql", Duration.ofMillis(100), 2048,
                 Nl2sqlMetricConstants.OUTCOME_SUCCESS, "acme");

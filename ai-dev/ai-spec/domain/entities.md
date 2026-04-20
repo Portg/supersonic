@@ -4,8 +4,13 @@
 
 ```
 Tenant 1──N Domain 1──N Model 1──N Dimension/Metric
-                         │
-                    Database (databaseId)
+  │                      │
+  │                 Database (databaseId)
+  │
+  ├── TenantQuota（并发配额，1:1）
+  └── LlmUsage（N，LLM 调用记录）
+
+LlmPricing（全局定价表，按 provider+model 查最新）
 
 Domain 1──N DataSet ←── Agent (N:N)
                 │
@@ -201,3 +206,38 @@ AlertRule ──→ ReportDeliveryConfig（deliveryConfigIds，复用推送渠�
 - baselineValue: Double
 - deliveryStatus: String（PENDING/SUCCESS/FAILED/SILENCED）
 - silenceUntil: DateTime
+
+### LlmUsage（LLM 用量记录）
+- id: Long
+- tenantId: Long
+- provider: String（模型提供商，如 openai / ollama）
+- model: String（模型名称，如 gpt-4o）
+- callType: String（NL2SQL/SUMMARY/PLUGIN/DATA_INTERPRET/CORRECTOR/MAPPER/ALIAS/MEMORY_REVIEW/UNKNOWN）
+- requestId: String（可选，关联对话/查询 ID）
+- traceId: String（可选，链路追踪 ID）
+- userId: String（可选，发起调用的用户）
+- inputTokens: Integer
+- outputTokens: Integer
+- estimatedCostMilli: Long（预估费用，单位：千分之一美分）
+- createdAt: DateTime
+
+### LlmPricing（LLM 定价配置）
+- id: Long
+- provider: String
+- model: String
+- inputPricePerMToken: Long（每百万 input token 费用，单位：千分之一美分）
+- outputPricePerMToken: Long（每百万 output token 费用，单位：千分之一美分）
+- effectiveFrom: DateTime（生效时间，取最新一条）
+- createdAt: DateTime
+
+### TenantQuota（租户并发配额）
+- id: Long
+- tenantId: Long
+- jdbcConcurrent: Integer（JDBC 查询最大并发数，必填）
+- llmConcurrent: Integer（LLM 调用最大并发数，null=使用全局默认）
+- acquireTimeoutMs: Long（获取许可超时毫秒数，null=使用全局默认）
+- monthlyQueryCount: Integer（月度查询次数上限，null=不限制）
+- enabled: Boolean（false 时不限流，仍记录配置）
+- updatedAt: DateTime
+
+注：超额时返回 HTTP 429 + `Retry-After` 响应头，由 `TenantQuotaFilter` 统一拦截处理。

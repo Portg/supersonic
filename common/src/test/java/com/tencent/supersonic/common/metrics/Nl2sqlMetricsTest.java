@@ -20,7 +20,8 @@ class Nl2sqlMetricsTest {
     void setUp() {
         registry = new SimpleMeterRegistry();
         TenantTagNormalizer normalizer = new TenantTagNormalizer(List.of("acme"), 50, true);
-        metrics = new Nl2sqlMetrics(registry, normalizer);
+        metrics = new Nl2sqlMetrics(normalizer);
+        metrics.bindTo(registry);
     }
 
     @Test
@@ -30,7 +31,8 @@ class Nl2sqlMetricsTest {
 
         Timer t = registry.find(Nl2sqlMetricConstants.STAGE_DURATION).tag("stage", "rule_parse")
                 .tag("outcome", "success").tag("tenant_id", "acme").tag("agent_id", "agent-1")
-                .tag("parser_name", "NL2SQLParser").timer();
+                .tag("parser_name", "NL2SQLParser").tag("module", Nl2sqlMetricConstants.MODULE)
+                .tag("origin", "Nl2sqlMetrics").timer();
         assertThat(t).isNotNull();
         assertThat(t.count()).isEqualTo(1);
         assertThat(t.totalTime(java.util.concurrent.TimeUnit.MILLISECONDS)).isGreaterThan(100);
@@ -49,10 +51,14 @@ class Nl2sqlMetricsTest {
     @Test
     void recordLlmTokensPublishesCounterPerKind() {
         metrics.recordLlmTokens("gpt-4o", 300, 120);
-        Counter prompt = registry.find(Nl2sqlMetricConstants.LLM_TOKENS_TOTAL)
-                .tag("model", "gpt-4o").tag("kind", "prompt").counter();
-        Counter completion = registry.find(Nl2sqlMetricConstants.LLM_TOKENS_TOTAL)
-                .tag("model", "gpt-4o").tag("kind", "completion").counter();
+        Counter prompt =
+                registry.find(Nl2sqlMetricConstants.LLM_TOKENS_TOTAL).tag("model", "gpt-4o")
+                        .tag("kind", "prompt").tag("module", Nl2sqlMetricConstants.MODULE)
+                        .tag("origin", "Nl2sqlMetrics").counter();
+        Counter completion =
+                registry.find(Nl2sqlMetricConstants.LLM_TOKENS_TOTAL).tag("model", "gpt-4o")
+                        .tag("kind", "completion").tag("module", Nl2sqlMetricConstants.MODULE)
+                        .tag("origin", "Nl2sqlMetrics").counter();
         assertThat(prompt.count()).isEqualTo(300);
         assertThat(completion.count()).isEqualTo(120);
     }
@@ -72,7 +78,8 @@ class Nl2sqlMetricsTest {
             // simulate work
         }
         Timer timer = registry.find(Nl2sqlMetricConstants.STAGE_DURATION).tag("stage", "mapper")
-                .tag("mapper_name", "KeywordMapper").timer();
+                .tag("mapper_name", "KeywordMapper").tag("module", Nl2sqlMetricConstants.MODULE)
+                .tag("origin", "Nl2sqlMetrics").timer();
         assertThat(timer).isNotNull();
         assertThat(timer.count()).isEqualTo(1);
     }
@@ -81,14 +88,16 @@ class Nl2sqlMetricsTest {
     void mapperHitCounterIncrements() {
         metrics.recordMapperHit("KeywordMapper", true, "acme");
         Counter c = registry.find(Nl2sqlMetricConstants.MAPPER_HITS_TOTAL)
-                .tag("mapper_name", "KeywordMapper").tag("hit", "true").counter();
+                .tag("mapper_name", "KeywordMapper").tag("hit", "true")
+                .tag("module", Nl2sqlMetricConstants.MODULE).tag("origin", "Nl2sqlMetrics")
+                .counter();
         assertThat(c.count()).isEqualTo(1.0);
     }
 
     @Test
     void missingMeterRegistryIsNoop() {
-        Nl2sqlMetrics noop = new Nl2sqlMetrics((io.micrometer.core.instrument.MeterRegistry) null,
-                new TenantTagNormalizer(List.of(), 10, true));
+        // No bindTo() call — registry stays null, all record methods are no-ops.
+        Nl2sqlMetrics noop = new Nl2sqlMetrics(new TenantTagNormalizer(List.of(), 10, true));
 
         noop.recordStage("rule_parse", Duration.ofMillis(1), Nl2sqlMetricConstants.OUTCOME_SUCCESS,
                 "acme", "agent-1", "NL2SQLParser");

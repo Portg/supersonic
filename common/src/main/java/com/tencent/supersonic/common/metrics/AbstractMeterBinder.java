@@ -16,8 +16,9 @@ import org.springframework.lang.NonNull;
  * Design aligned with microsphere-observability's {@code AbstractMeterBinder}:
  * <ul>
  * <li>Template-method pattern: {@link #bindTo} → {@link #supports} → {@link #doBindTo}</li>
- * <li>Automatic "origin" tag derived from subclass simple name</li>
+ * <li>Automatic "origin" tag derived from subclass simple name, baked at construction</li>
  * <li>{@link #combine(String...)} helper for ad-hoc tag extension</li>
+ * <li>{@link #getRegistry()} / {@link #hasRegistry()} for dynamic metric recording</li>
  * <li>Protected {@link Logger} for subclass use</li>
  * </ul>
  */
@@ -31,6 +32,7 @@ public abstract class AbstractMeterBinder implements MeterBinder {
     protected final Logger logger = LoggerFactory.getLogger(getClass());
 
     protected final Iterable<Tag> tags;
+    private volatile MeterRegistry registry;
 
     protected AbstractMeterBinder() {
         this.tags = Tags.of(ORIGIN_TAG_KEY, getClass().getSimpleName());
@@ -46,10 +48,11 @@ public abstract class AbstractMeterBinder implements MeterBinder {
             logger.info("Metrics not supported for registry [{}]", registry.getClass().getName());
             return;
         }
+        this.registry = registry;
         try {
             doBindTo(registry);
         } catch (Exception e) {
-            logger.error("Failed to bind to MeterRegistry[{}]", registry, e);
+            logger.warn("Failed to bind metrics: {}", e.getMessage(), e);
         }
     }
 
@@ -65,6 +68,16 @@ public abstract class AbstractMeterBinder implements MeterBinder {
      * {@link #bindTo}.
      */
     protected abstract void doBindTo(MeterRegistry registry) throws Exception;
+
+    /** Returns the MeterRegistry bound via {@link #bindTo}, or {@code null} if not yet bound. */
+    protected MeterRegistry getRegistry() {
+        return registry;
+    }
+
+    /** Returns {@code true} if a registry has been bound. */
+    protected boolean hasRegistry() {
+        return registry != null;
+    }
 
     /**
      * Returns common tags: constructor-provided tags merged with origin tag.

@@ -1,5 +1,6 @@
 package com.tencent.supersonic.common.quota;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import org.junit.jupiter.api.Test;
@@ -7,12 +8,14 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
 import java.io.IOException;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TenantQuotaFilterTest {
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Test
     void translatesExceptionTo429WithRetryAfter() throws ServletException, IOException {
@@ -27,7 +30,8 @@ class TenantQuotaFilterTest {
 
         assertEquals(429, resp.getStatus());
         assertEquals("5", resp.getHeader("Retry-After"));
-        assertTrue(resp.getContentAsString().contains("TOO_MANY_REQUESTS"));
+        assertEquals("TOO_MANY_REQUESTS",
+                OBJECT_MAPPER.readValue(resp.getContentAsString(), Map.class).get("status"));
     }
 
     @Test

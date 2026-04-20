@@ -58,4 +58,23 @@ class CostEstimatorTest {
 
         verify(mapper, times(1)).selectList(any());
     }
+
+    @Test
+    void refreshInvalidatesSpecificPricingEntry() {
+        LlmPricingDOMapper mapper = mock(LlmPricingDOMapper.class);
+        LlmPricingDO first = new LlmPricingDO();
+        first.setInputPricePer1kMicros(100L);
+        first.setOutputPricePer1kMicros(100L);
+        LlmPricingDO second = new LlmPricingDO();
+        second.setInputPricePer1kMicros(200L);
+        second.setOutputPricePer1kMicros(200L);
+        when(mapper.selectList(any())).thenReturn(List.of(first), List.of(second));
+
+        CostEstimatorImpl est = new CostEstimatorImpl(mapper);
+
+        assertThat(est.estimate("OPEN_AI", "gpt-4o-mini", 1000, 0)).isEqualTo(100L);
+        est.refresh("OPEN_AI", "gpt-4o-mini");
+        assertThat(est.estimate("OPEN_AI", "gpt-4o-mini", 1000, 0)).isEqualTo(200L);
+        verify(mapper, times(2)).selectList(any());
+    }
 }

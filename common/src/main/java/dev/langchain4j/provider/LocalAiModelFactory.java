@@ -1,7 +1,10 @@
 package dev.langchain4j.provider;
 
+import com.tencent.supersonic.common.llm.LlmUsageRecorder;
+import com.tencent.supersonic.common.llm.TokenCountingChatModel;
 import com.tencent.supersonic.common.pojo.ChatModelConfig;
 import com.tencent.supersonic.common.pojo.EmbeddingModelConfig;
+import com.tencent.supersonic.common.util.ContextUtils;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.localai.LocalAiChatModel;
@@ -20,12 +23,17 @@ public class LocalAiModelFactory implements ModelFactory, InitializingBean {
 
     @Override
     public ChatLanguageModel createChatModel(ChatModelConfig modelConfig) {
-        return LocalAiChatModel.builder().baseUrl(modelConfig.getBaseUrl())
+        ChatLanguageModel raw = LocalAiChatModel.builder().baseUrl(modelConfig.getBaseUrl())
                 .modelName(modelConfig.getModelName()).temperature(modelConfig.getTemperature())
                 .timeout(Duration.ofSeconds(modelConfig.getTimeOut())).topP(modelConfig.getTopP())
                 .logRequests(modelConfig.getLogRequests())
                 .logResponses(modelConfig.getLogResponses()).maxRetries(modelConfig.getMaxRetries())
                 .build();
+        LlmUsageRecorder recorder = ContextUtils.getBean(LlmUsageRecorder.class);
+        if (recorder == null) {
+            return raw;
+        }
+        return new TokenCountingChatModel(raw, recorder, PROVIDER, modelConfig.getModelName());
     }
 
     @Override

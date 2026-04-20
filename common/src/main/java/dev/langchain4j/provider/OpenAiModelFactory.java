@@ -1,7 +1,10 @@
 package dev.langchain4j.provider;
 
+import com.tencent.supersonic.common.llm.LlmUsageRecorder;
+import com.tencent.supersonic.common.llm.TokenCountingChatModel;
 import com.tencent.supersonic.common.pojo.ChatModelConfig;
 import com.tencent.supersonic.common.pojo.EmbeddingModelConfig;
+import com.tencent.supersonic.common.util.ContextUtils;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
@@ -35,7 +38,12 @@ public class OpenAiModelFactory implements ModelFactory, InitializingBean {
             openAiChatModelBuilder.strictJsonSchema(true)
                     .responseFormat(modelConfig.getJsonFormatType());
         }
-        return openAiChatModelBuilder.build();
+        ChatLanguageModel raw = openAiChatModelBuilder.build();
+        LlmUsageRecorder recorder = ContextUtils.getBean(LlmUsageRecorder.class);
+        if (recorder == null) {
+            return raw;
+        }
+        return new TokenCountingChatModel(raw, recorder, PROVIDER, modelConfig.getModelName());
     }
 
     @Override

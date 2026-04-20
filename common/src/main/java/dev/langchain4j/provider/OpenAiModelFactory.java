@@ -41,7 +41,7 @@ public class OpenAiModelFactory implements ModelFactory, InitializingBean {
                     .responseFormat(modelConfig.getJsonFormatType());
         }
         ChatLanguageModel raw = openAiChatModelBuilder.build();
-        LlmUsageRecorder recorder = ContextUtils.getBean(LlmUsageRecorder.class);
+        LlmUsageRecorder recorder = getRecorder();
         if (recorder == null) {
             return raw;
         }
@@ -56,7 +56,7 @@ public class OpenAiModelFactory implements ModelFactory, InitializingBean {
                 .topP(modelConfig.getTopP()).timeout(Duration.ofSeconds(modelConfig.getTimeOut()))
                 .logRequests(modelConfig.getLogRequests())
                 .logResponses(modelConfig.getLogResponses()).build();
-        LlmUsageRecorder recorder = ContextUtils.getBean(LlmUsageRecorder.class);
+        LlmUsageRecorder recorder = getRecorder();
         if (recorder == null) {
             return raw;
         }
@@ -76,5 +76,13 @@ public class OpenAiModelFactory implements ModelFactory, InitializingBean {
     @Override
     public void afterPropertiesSet() {
         ModelProvider.add(PROVIDER, this);
+    }
+
+    private LlmUsageRecorder getRecorder() {
+        try {
+            return ContextUtils.getBean(LlmUsageRecorder.class);
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

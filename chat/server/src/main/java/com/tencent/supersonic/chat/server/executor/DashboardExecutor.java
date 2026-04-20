@@ -7,6 +7,8 @@ import com.tencent.supersonic.chat.api.pojo.response.QueryResult;
 import com.tencent.supersonic.chat.server.agent.Agent;
 import com.tencent.supersonic.chat.server.pojo.ExecuteContext;
 import com.tencent.supersonic.chat.server.service.AgentService;
+import com.tencent.supersonic.common.llm.LlmCallContext;
+import com.tencent.supersonic.common.llm.LlmCallType;
 import com.tencent.supersonic.common.pojo.Aggregator;
 import com.tencent.supersonic.common.pojo.ChatApp;
 import com.tencent.supersonic.common.pojo.DateConf;
@@ -1145,8 +1147,12 @@ public class DashboardExecutor implements ChatQueryExecutor {
                 return null;
             }
 
-            Response<AiMessage> response = chatLanguageModel
-                    .generate(dev.langchain4j.data.message.UserMessage.from(prompt));
+            Response<AiMessage> response;
+            try (LlmCallContext.Scope ignored =
+                    LlmCallContext.open(LlmCallType.SUMMARY, null, null, null)) {
+                response = chatLanguageModel
+                        .generate(dev.langchain4j.data.message.UserMessage.from(prompt));
+            }
             String llmInsight = response.content().text();
 
             log.info("LLM insight generated successfully, length={}", llmInsight.length());

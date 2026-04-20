@@ -30,7 +30,7 @@ public class OllamaModelFactory implements ModelFactory, InitializingBean {
                 .timeout(Duration.ofSeconds(modelConfig.getTimeOut())).topP(modelConfig.getTopP())
                 .maxRetries(modelConfig.getMaxRetries()).logRequests(modelConfig.getLogRequests())
                 .logResponses(modelConfig.getLogResponses()).build();
-        LlmUsageRecorder recorder = ContextUtils.getBean(LlmUsageRecorder.class);
+        LlmUsageRecorder recorder = getRecorder();
         if (recorder == null) {
             return raw;
         }
@@ -54,5 +54,13 @@ public class OllamaModelFactory implements ModelFactory, InitializingBean {
     @Override
     public void afterPropertiesSet() {
         ModelProvider.add(PROVIDER, this);
+    }
+
+    private LlmUsageRecorder getRecorder() {
+        try {
+            return ContextUtils.getBean(LlmUsageRecorder.class);
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

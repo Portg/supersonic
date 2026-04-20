@@ -29,7 +29,7 @@ public class LocalAiModelFactory implements ModelFactory, InitializingBean {
                 .logRequests(modelConfig.getLogRequests())
                 .logResponses(modelConfig.getLogResponses()).maxRetries(modelConfig.getMaxRetries())
                 .build();
-        LlmUsageRecorder recorder = ContextUtils.getBean(LlmUsageRecorder.class);
+        LlmUsageRecorder recorder = getRecorder();
         if (recorder == null) {
             return raw;
         }
@@ -52,5 +52,13 @@ public class LocalAiModelFactory implements ModelFactory, InitializingBean {
     @Override
     public void afterPropertiesSet() {
         ModelProvider.add(PROVIDER, this);
+    }
+
+    private LlmUsageRecorder getRecorder() {
+        try {
+            return ContextUtils.getBean(LlmUsageRecorder.class);
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

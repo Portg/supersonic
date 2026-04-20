@@ -23,6 +23,11 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class LlmUsageController {
 
+    private static final String PLATFORM_ADMIN = "PLATFORM_ADMIN";
+    private static final String PLATFORM_QUOTA = "PLATFORM_QUOTA";
+    private static final String TENANT_USAGE_VIEW = "TENANT_USAGE_VIEW";
+    private static final String TENANT_ADMIN = "TENANT_ADMIN";
+
     private final LlmUsageService llmUsageService;
     private final UserService userService;
 
@@ -37,8 +42,9 @@ public class LlmUsageController {
             @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int size,
             HttpServletRequest request, HttpServletResponse response)
             throws IllegalAccessException {
-        checkAdminPermission(userService.getCurrentUser(request, response));
-        return llmUsageService.query(tenantId, from, to, model, callType, page, size);
+        Long authorizedTenantId =
+                authorizeTenant(tenantId, userService.getCurrentUser(request, response));
+        return llmUsageService.query(authorizedTenantId, from, to, model, callType, page, size);
     }
 
     @GetMapping("/daily")
@@ -47,8 +53,9 @@ public class LlmUsageController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             HttpServletRequest request, HttpServletResponse response)
             throws IllegalAccessException {
-        checkAdminPermission(userService.getCurrentUser(request, response));
-        return llmUsageService.dailyAggregates(tenantId, from, to);
+        Long authorizedTenantId =
+                authorizeTenant(tenantId, userService.getCurrentUser(request, response));
+        return llmUsageService.dailyAggregates(authorizedTenantId, from, to);
     }
 
     @GetMapping("/total-tokens")
@@ -57,13 +64,34 @@ public class LlmUsageController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             HttpServletRequest request, HttpServletResponse response)
             throws IllegalAccessException {
-        checkAdminPermission(userService.getCurrentUser(request, response));
-        return llmUsageService.sumTokens(tenantId, from, to);
+        Long authorizedTenantId =
+                authorizeTenant(tenantId, userService.getCurrentUser(request, response));
+        return llmUsageService.sumTokens(authorizedTenantId, from, to);
     }
 
-    private void checkAdminPermission(User user) throws IllegalAccessException {
-        if (user == null || user.getIsAdmin() == null || user.getIsAdmin() != 1) {
+    private Long authorizeTenant(Long requestedTenantId, User user) throws IllegalAccessException {
+        if (user == null || requestedTenantId == null) {
             throw new IllegalAccessException("只有管理员才能执行此操作");
         }
+        if (hasAnyPermission(user, PLATFORM_ADMIN, PLATFORM_QUOTA)) {
+            return requestedTenantId;
+        }
+        if (requestedTenantId.equals(user.getTenantId()) && (user.isSuperAdmin()
+                || hasAnyPermission(user, TENANT_ADMIN, TENANT_USAGE_VIEW))) {
+            return requestedTenantId;
+        }
+        throw new IllegalAccessException("无权查看该租户的 LLM 用量");
+    }
+
+    private boolean hasAnyPermission(User user, String... permissions) {
+        if (user.getPermissions() == null || user.getPermissions().isEmpty()) {
+            return false;
+        }
+        for (String permission : permissions) {
+            if (user.getPermissions().contains(permission)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

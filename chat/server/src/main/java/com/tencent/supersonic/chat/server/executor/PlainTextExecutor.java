@@ -6,6 +6,9 @@ import com.tencent.supersonic.chat.server.agent.Agent;
 import com.tencent.supersonic.chat.server.pojo.ExecuteContext;
 import com.tencent.supersonic.chat.server.service.AgentService;
 import com.tencent.supersonic.chat.server.service.ChatManageService;
+import com.tencent.supersonic.common.llm.LlmCallContext;
+import com.tencent.supersonic.common.llm.LlmCallType;
+import com.tencent.supersonic.common.metrics.QueryTraceContext;
 import com.tencent.supersonic.common.pojo.ChatApp;
 import com.tencent.supersonic.common.pojo.enums.AppModule;
 import com.tencent.supersonic.common.util.ChatAppManager;
@@ -55,7 +58,15 @@ public class PlainTextExecutor implements ChatQueryExecutor {
         Prompt prompt = PromptTemplate.from(promptStr).apply(Collections.EMPTY_MAP);
         ChatLanguageModel chatLanguageModel =
                 ModelProvider.getChatModel(chatApp.getChatModelConfig());
-        Response<AiMessage> response = chatLanguageModel.generate(prompt.toUserMessage());
+        Response<AiMessage> response;
+        try (LlmCallContext.Scope ignored = LlmCallContext.open(LlmCallType.UNKNOWN,
+                executeContext.getRequest().getQueryId() == null ? null
+                        : executeContext.getRequest().getQueryId().toString(),
+                QueryTraceContext.current().orElse(null),
+                executeContext.getRequest().getUser() == null ? null
+                        : executeContext.getRequest().getUser().getName())) {
+            response = chatLanguageModel.generate(prompt.toUserMessage());
+        }
 
         QueryResult result = new QueryResult();
         result.setQueryState(QueryState.SUCCESS);

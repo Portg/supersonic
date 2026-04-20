@@ -27,7 +27,7 @@ public class DifyModelFactory implements ModelFactory, InitializingBean {
         ChatLanguageModel raw = DifyAiChatModel.builder().baseUrl(modelConfig.getBaseUrl())
                 .apiKey(AESEncryptionUtil.aesDecryptECB(modelConfig.getApiKey()))
                 .modelName(modelConfig.getModelName()).timeOut(modelConfig.getTimeOut()).build();
-        LlmUsageRecorder recorder = ContextUtils.getBean(LlmUsageRecorder.class);
+        LlmUsageRecorder recorder = getRecorder();
         if (recorder == null) {
             return raw;
         }
@@ -52,5 +52,13 @@ public class DifyModelFactory implements ModelFactory, InitializingBean {
     @Override
     public void afterPropertiesSet() {
         ModelProvider.add(PROVIDER, this);
+    }
+
+    private LlmUsageRecorder getRecorder() {
+        try {
+            return ContextUtils.getBean(LlmUsageRecorder.class);
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

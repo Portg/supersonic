@@ -9,6 +9,8 @@ import com.tencent.supersonic.chat.server.agent.Agent;
 import com.tencent.supersonic.chat.server.pojo.ChatMemory;
 import com.tencent.supersonic.chat.server.service.AgentService;
 import com.tencent.supersonic.chat.server.service.MemoryService;
+import com.tencent.supersonic.common.llm.LlmCallContext;
+import com.tencent.supersonic.common.llm.LlmCallType;
 import com.tencent.supersonic.common.pojo.ChatApp;
 import com.tencent.supersonic.common.pojo.User;
 import com.tencent.supersonic.common.pojo.enums.AppModule;
@@ -104,7 +106,11 @@ public class MemoryReviewTask {
         ChatLanguageModel chatLanguageModel =
                 ModelProvider.getChatModel(ModelConfigHelper.getChatModelConfig(chatApp));
         if (Objects.nonNull(chatLanguageModel)) {
-            String response = chatLanguageModel.generate(prompt.toUserMessage()).content().text();
+            String response;
+            try (LlmCallContext.Scope ignored = LlmCallContext.open(LlmCallType.MEMORY_REVIEW,
+                    m.getId() == null ? null : m.getId().toString(), null, m.getCreatedBy())) {
+                response = chatLanguageModel.generate(prompt.toUserMessage()).content().text();
+            }
             keyPipelineLog.info("MemoryReviewTask modelReq:\n{} \nmodelResp:\n{}", promptStr,
                     response);
             processResponse(response, m);

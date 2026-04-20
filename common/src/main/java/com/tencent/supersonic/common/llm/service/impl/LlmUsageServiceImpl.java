@@ -9,6 +9,7 @@ import com.tencent.supersonic.common.llm.service.LlmUsageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
 import java.time.LocalDate;
@@ -24,6 +25,7 @@ public class LlmUsageServiceImpl implements LlmUsageService {
     private final LlmUsageDOMapper mapper;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void batchInsert(List<LlmUsageDO> records) {
         if (records == null || records.isEmpty()) {
             return;

@@ -94,8 +94,22 @@ public class LlmUsageRecorder {
             service.batchInsert(dos);
             publisher.publishEvent(new LlmUsageEvent(this, dos));
         } catch (Exception e) {
-            log.error("LlmUsageRecorder flush failed, {} records lost", dos.size(), e);
+            int requeued = requeue(batch);
+            log.error("LlmUsageRecorder flush failed, {} records requeued and {} records lost",
+                    requeued, dos.size() - requeued, e);
         }
+    }
+
+    private int requeue(List<LlmUsageRecord> batch) {
+        int requeued = 0;
+        for (LlmUsageRecord record : batch) {
+            if (queue.offer(record)) {
+                requeued++;
+            } else {
+                dropCount.incrementAndGet();
+            }
+        }
+        return requeued;
     }
 
     private LlmUsageDO toDO(LlmUsageRecord r) {

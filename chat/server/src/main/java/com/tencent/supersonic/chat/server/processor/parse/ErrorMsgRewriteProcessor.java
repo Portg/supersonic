@@ -1,6 +1,9 @@
 package com.tencent.supersonic.chat.server.processor.parse;
 
 import com.tencent.supersonic.chat.server.pojo.ParseContext;
+import com.tencent.supersonic.common.llm.LlmCallContext;
+import com.tencent.supersonic.common.llm.LlmCallType;
+import com.tencent.supersonic.common.metrics.QueryTraceContext;
 import com.tencent.supersonic.common.pojo.ChatApp;
 import com.tencent.supersonic.common.pojo.enums.AppModule;
 import com.tencent.supersonic.common.util.ChatAppManager;
@@ -73,7 +76,15 @@ public class ErrorMsgRewriteProcessor implements ParseResultProcessor {
         Prompt prompt = PromptTemplate.from(chatApp.getPrompt()).apply(variables);
         ChatLanguageModel chatLanguageModel =
                 ModelProvider.getChatModel(ModelConfigHelper.getChatModelConfig(chatApp));
-        Response<AiMessage> response = chatLanguageModel.generate(prompt.toUserMessage());
+        Response<AiMessage> response;
+        try (LlmCallContext.Scope ignored = LlmCallContext.open(LlmCallType.SUMMARY,
+                parseContext.getRequest().getQueryId() == null ? null
+                        : parseContext.getRequest().getQueryId().toString(),
+                QueryTraceContext.current().orElse(null),
+                parseContext.getRequest().getUser() == null ? null
+                        : parseContext.getRequest().getUser().getName())) {
+            response = chatLanguageModel.generate(prompt.toUserMessage());
+        }
         String rewrittenMsg = response.content().text();
         parseContext.getResponse().setErrorMsg(rewrittenMsg);
         parseContext.getResponse().setState(ParseResp.ParseState.FAILED);

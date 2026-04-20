@@ -99,15 +99,14 @@ public class NL2SQLParser implements ChatQueryParser {
 
         try (QueryTraceContext.Scope trace = QueryTraceContext.open()) {
             log.info("NL2SQL parse begin, queryTraceId={}, agentId={}", trace.traceId(), agentId);
-            LlmCallContext.set(LlmCallType.NL2SQL,
+            try (LlmCallContext.Scope ignored = LlmCallContext.open(LlmCallType.NL2SQL,
                     parseContext.getRequest().getQueryId() != null
                             ? parseContext.getRequest().getQueryId().toString()
                             : null,
                     trace.traceId(),
                     parseContext.getRequest().getUser() != null
                             ? parseContext.getRequest().getUser().getName()
-                            : null);
-            try {
+                            : null)) {
                 // first go with rule-based parsers unless the user has already selected one parse.
                 if (Objects.isNull(parseContext.getRequest().getSelectedParse())) {
                     try (Nl2sqlMetrics.StageTimer stage =
@@ -210,8 +209,6 @@ public class NL2SQLParser implements ChatQueryParser {
                         }
                     }
                 }
-            } finally {
-                LlmCallContext.clear();
             }
         }
     }

@@ -73,4 +73,24 @@ class LlmUsageRecorderTest {
         rec.flushNow();
         verify(service).batchInsert(argThat(list -> list.size() == 2));
     }
+
+    @Test
+    void flushFailureRequeuesRecordsAndDoesNotPublishEvent() {
+        LlmUsageService service = mock(LlmUsageService.class);
+        ApplicationEventPublisher publisher = mock(ApplicationEventPublisher.class);
+        CostEstimator estimator = mock(CostEstimator.class);
+        when(estimator.estimate(any(), any(), anyInt(), anyInt())).thenReturn(0L);
+        doThrow(new RuntimeException("db down")).when(service).batchInsert(any());
+
+        LlmUsageRecorder rec = new LlmUsageRecorder(service, publisher, estimator, 1000, 100);
+        rec.record(sample());
+
+        rec.flushNow();
+
+        verify(service).batchInsert(argThat(list -> list.size() == 1));
+        verify(publisher, never()).publishEvent(any());
+        reset(service);
+        rec.flushNow();
+        verify(service).batchInsert(argThat(list -> list.size() == 1));
+    }
 }

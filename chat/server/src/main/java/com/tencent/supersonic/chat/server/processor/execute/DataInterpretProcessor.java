@@ -7,6 +7,9 @@ import com.tencent.supersonic.chat.server.agent.Agent;
 import com.tencent.supersonic.chat.server.persistence.dataobject.ChatQueryDO;
 import com.tencent.supersonic.chat.server.persistence.repository.ChatQueryRepository;
 import com.tencent.supersonic.chat.server.pojo.ExecuteContext;
+import com.tencent.supersonic.common.llm.LlmCallContext;
+import com.tencent.supersonic.common.llm.LlmCallType;
+import com.tencent.supersonic.common.metrics.QueryTraceContext;
 import com.tencent.supersonic.common.pojo.ChatApp;
 import com.tencent.supersonic.common.pojo.enums.AppModule;
 import com.tencent.supersonic.common.util.ChatAppManager;
@@ -93,57 +96,64 @@ public class DataInterpretProcessor implements ExecuteResultProcessor {
         variable.put("data", queryResult.getTextResult());
 
         Prompt prompt = PromptTemplate.from(chatApp.getPrompt()).apply(variable);
-        if (executeContext.getRequest().isStreamingResult()) {
-            StreamingChatLanguageModel chatLanguageModel =
-                    ModelProvider.getChatStreamingModel(chatApp.getChatModelConfig());
-            final Long queryId = executeContext.getRequest().getQueryId();
-            resultCache.put(queryId, new StringBuffer(tip));
-            chatLanguageModel.generate(prompt.toUserMessage(),
-                    new StreamingResponseHandler<AiMessage>() {
-                        @Override
-                        public void onNext(String token) {
-                            StringBuffer buf = resultCache.get(queryId);
-                            if (buf != null) {
-                                buf.append(token);
+        try (LlmCallContext.Scope ignored = LlmCallContext.open(LlmCallType.DATA_INTERPRET,
+                executeContext.getRequest().getQueryId() == null ? null
+                        : executeContext.getRequest().getQueryId().toString(),
+                QueryTraceContext.current().orElse(null),
+                executeContext.getRequest().getUser() == null ? null
+                        : executeContext.getRequest().getUser().getName())) {
+            if (executeContext.getRequest().isStreamingResult()) {
+                StreamingChatLanguageModel chatLanguageModel =
+                        ModelProvider.getChatStreamingModel(chatApp.getChatModelConfig());
+                final Long queryId = executeContext.getRequest().getQueryId();
+                resultCache.put(queryId, new StringBuffer(tip));
+                chatLanguageModel.generate(prompt.toUserMessage(),
+                        new StreamingResponseHandler<AiMessage>() {
+                            @Override
+                            public void onNext(String token) {
+                                StringBuffer buf = resultCache.get(queryId);
+                                if (buf != null) {
+                                    buf.append(token);
+                                }
                             }
-                        }
 
-                        @Override
-                        public void onComplete(Response<AiMessage> response) {
-                            ChatQueryRepository chatQueryRepository =
-                                    ContextUtils.getBean(ChatQueryRepository.class);
-                            ChatQueryDO chatQueryDO = chatQueryRepository.getChatQueryDO(queryId);
-                            JSONObject queryResult = JSON.parseObject(chatQueryDO.getQueryResult());
-                            StringBuffer buf = resultCache.get(queryId);
-                            if (buf != null) {
-                                queryResult.put("textSummary",
-                                        buf.toString().substring(tip.length()));
+                            @Override
+                            public void onComplete(Response<AiMessage> response) {
+                                ChatQueryRepository chatQueryRepository =
+                                        ContextUtils.getBean(ChatQueryRepository.class);
+                                ChatQueryDO chatQueryDO =
+                                        chatQueryRepository.getChatQueryDO(queryId);
+                                JSONObject queryResult =
+                                        JSON.parseObject(chatQueryDO.getQueryResult());
+                                StringBuffer buf = resultCache.get(queryId);
+                                if (buf != null) {
+                                    queryResult.put("textSummary",
+                                            buf.toString().substring(tip.length()));
+                                }
+                                chatQueryDO.setQueryResult(queryResult.toJSONString());
+                                chatQueryRepository.updateChatQuery(chatQueryDO);
+                                resultCache.remove(queryId);
                             }
-                            chatQueryDO.setQueryResult(queryResult.toJSONString());
-                            chatQueryRepository.updateChatQuery(chatQueryDO);
-                            resultCache.remove(queryId);
-                        }
 
-                        @Override
-                        public void onError(Throwable error) {
-                            keyPipelineLog.error(
-                                    "DataInterpretProcessor streaming error for queryId: {}",
-                                    queryId, error);
-                            resultCache.remove(queryId);
-                        }
-                    });
-        } else {
-            ChatLanguageModel chatLanguageModel =
-                    ModelProvider.getChatModel(chatApp.getChatModelConfig());
-            Response<AiMessage> response = chatLanguageModel.generate(prompt.toUserMessage());
-            String anwser = response.content().text();
-            keyPipelineLog.info("DataInterpretProcessor modelReq:\n{} \nmodelResp:\n{}",
-                    prompt.text(), anwser);
-            if (StringUtils.isNotBlank(anwser)) {
-                queryResult.setTextSummary(anwser);
+                            @Override
+                            public void onError(Throwable error) {
+                                keyPipelineLog.error(
+                                        "DataInterpretProcessor streaming error for queryId: {}",
+                                        queryId, error);
+                                resultCache.remove(queryId);
+                            }
+                        });
+            } else {
+                ChatLanguageModel chatLanguageModel =
+                        ModelProvider.getChatModel(chatApp.getChatModelConfig());
+                Response<AiMessage> response = chatLanguageModel.generate(prompt.toUserMessage());
+                String anwser = response.content().text();
+                keyPipelineLog.info("DataInterpretProcessor modelReq:\n{} \nmodelResp:\n{}",
+                        prompt.text(), anwser);
+                if (StringUtils.isNotBlank(anwser)) {
+                    queryResult.setTextSummary(anwser);
+                }
             }
         }
-
-
     }
 }

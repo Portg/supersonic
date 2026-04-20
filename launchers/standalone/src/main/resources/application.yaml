@@ -96,6 +96,15 @@ management:
   metrics:
     tags:
       application: supersonic
+    distribution:
+      percentiles-histogram:
+        s2.nl2sql.stage.duration: true
+        s2.nl2sql.llm.duration: true
+        s2.nl2sql.db.duration: true
+      slo:
+        s2.nl2sql.stage.duration: 0.1s,0.5s,1s,2s,5s,10s,15s,30s
+        s2.nl2sql.llm.duration: 0.5s,1s,2s,5s,10s,15s,30s
+        s2.nl2sql.db.duration: 0.1s,0.5s,1s,5s,10s,30s
 
 logging:
   level:
@@ -312,3 +321,8 @@ s2:
   data-sync:
     max-concurrent-per-tenant: 2
     max-full-sync-per-dataset: 1
+  observability:
+    nl2sql:
+      tenant-tag-limit: 50
+      top-tenants: []  # operator-populated, e.g. ['tenant-a','tenant-b']; others rolled to 'other'
+      emit-tenant-tag: true

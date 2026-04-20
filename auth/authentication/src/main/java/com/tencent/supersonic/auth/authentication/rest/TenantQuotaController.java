@@ -88,12 +88,19 @@ public class TenantQuotaController {
         if (req == null) {
             throw new IllegalArgumentException("request body is required");
         }
+        // jdbcConcurrent is the primary enforcement knob — required and must be positive.
         requirePositive(req.getJdbcConcurrent(), "jdbcConcurrent");
-        requirePositive(req.getLlmConcurrent(), "llmConcurrent");
-        if (req.getMonthlyQueryCount() == null || req.getMonthlyQueryCount() < 0) {
+        // llmConcurrent, acquireTimeoutMs, monthlyQueryCount are optional;
+        // null means "use the global default from s2.tenant.quota.default.*".
+        if (req.getLlmConcurrent() != null && req.getLlmConcurrent() <= 0) {
+            throw new IllegalArgumentException("llmConcurrent must be positive when provided");
+        }
+        if (req.getAcquireTimeoutMs() != null && req.getAcquireTimeoutMs() <= 0) {
+            throw new IllegalArgumentException("acquireTimeoutMs must be positive when provided");
+        }
+        if (req.getMonthlyQueryCount() != null && req.getMonthlyQueryCount() < 0) {
             throw new IllegalArgumentException("monthlyQueryCount must be zero or positive");
         }
-        requirePositive(req.getAcquireTimeoutMs(), "acquireTimeoutMs");
         if (req.getEnabled() == null) {
             throw new IllegalArgumentException("enabled is required");
         }

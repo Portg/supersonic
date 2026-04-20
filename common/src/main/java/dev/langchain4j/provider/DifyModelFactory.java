@@ -7,10 +7,10 @@ import com.tencent.supersonic.common.pojo.EmbeddingModelConfig;
 import com.tencent.supersonic.common.util.AESEncryptionUtil;
 import com.tencent.supersonic.common.util.ContextUtils;
 import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.StreamingChatLanguageModel;
 import dev.langchain4j.model.dify.DifyAiChatModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.openai.OpenAiEmbeddingModel;
-import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.stereotype.Service;
 
@@ -35,7 +35,7 @@ public class DifyModelFactory implements ModelFactory, InitializingBean {
     }
 
     @Override
-    public OpenAiStreamingChatModel createChatStreamingModel(ChatModelConfig modelConfig) {
+    public StreamingChatLanguageModel createChatStreamingModel(ChatModelConfig modelConfig) {
         throw new RuntimeException("待开发");
     }
 

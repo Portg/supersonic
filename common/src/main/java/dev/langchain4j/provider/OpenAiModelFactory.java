@@ -2,10 +2,12 @@ package dev.langchain4j.provider;
 
 import com.tencent.supersonic.common.llm.LlmUsageRecorder;
 import com.tencent.supersonic.common.llm.TokenCountingChatModel;
+import com.tencent.supersonic.common.llm.TokenCountingStreamingChatModel;
 import com.tencent.supersonic.common.pojo.ChatModelConfig;
 import com.tencent.supersonic.common.pojo.EmbeddingModelConfig;
 import com.tencent.supersonic.common.util.ContextUtils;
 import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.StreamingChatLanguageModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.model.openai.OpenAiEmbeddingModel;
@@ -47,13 +49,19 @@ public class OpenAiModelFactory implements ModelFactory, InitializingBean {
     }
 
     @Override
-    public OpenAiStreamingChatModel createChatStreamingModel(ChatModelConfig modelConfig) {
-        return OpenAiStreamingChatModel.builder().baseUrl(modelConfig.getBaseUrl())
-                .modelName(modelConfig.getModelName()).apiKey(modelConfig.keyDecrypt())
-                .temperature(modelConfig.getTemperature()).topP(modelConfig.getTopP())
-                .timeout(Duration.ofSeconds(modelConfig.getTimeOut()))
+    public StreamingChatLanguageModel createChatStreamingModel(ChatModelConfig modelConfig) {
+        StreamingChatLanguageModel raw = OpenAiStreamingChatModel.builder()
+                .baseUrl(modelConfig.getBaseUrl()).modelName(modelConfig.getModelName())
+                .apiKey(modelConfig.keyDecrypt()).temperature(modelConfig.getTemperature())
+                .topP(modelConfig.getTopP()).timeout(Duration.ofSeconds(modelConfig.getTimeOut()))
                 .logRequests(modelConfig.getLogRequests())
                 .logResponses(modelConfig.getLogResponses()).build();
+        LlmUsageRecorder recorder = ContextUtils.getBean(LlmUsageRecorder.class);
+        if (recorder == null) {
+            return raw;
+        }
+        return new TokenCountingStreamingChatModel(raw, recorder, PROVIDER,
+                modelConfig.getModelName());
     }
 
     @Override

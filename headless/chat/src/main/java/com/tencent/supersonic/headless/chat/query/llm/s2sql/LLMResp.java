@@ -21,4 +21,8 @@ public class LLMResp {
     private List<String> fields;
 
     private Map<String, LLMSqlResp> sqlRespMap;
+
+    private String modelName;
+    private long promptTokens;
+    private long completionTokens;
 }

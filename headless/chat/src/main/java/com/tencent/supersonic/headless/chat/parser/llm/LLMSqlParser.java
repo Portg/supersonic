@@ -57,7 +57,9 @@ public class LLMSqlParser implements SemanticParser {
         Map<String, LLMSqlResp> sqlRespMap = new HashMap<>();
         ParseResult parseResult = null;
         while (currentRetry <= maxRetries) {
-            log.info("currentRetryRound:{}, start runText2SQL", currentRetry);
+            log.info("currentRetryRound:{}, queryTraceId={}, start runText2SQL", currentRetry,
+                    com.tencent.supersonic.common.metrics.QueryTraceContext.current()
+                            .orElse("none"));
             try {
                 LLMResp llmResp = requestService.runText2SQL(llmReq);
                 if (Objects.nonNull(llmResp)) {

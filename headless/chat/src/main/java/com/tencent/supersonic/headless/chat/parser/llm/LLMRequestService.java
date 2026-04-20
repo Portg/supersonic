@@ -74,12 +74,49 @@ public class LLMRequestService {
     }
 
     public LLMResp runText2SQL(LLMReq llmReq) {
+        com.tencent.supersonic.common.metrics.Nl2sqlMetrics metrics =
+                com.tencent.supersonic.common.util.ContextUtils
+                        .getBean(com.tencent.supersonic.common.metrics.Nl2sqlMetrics.class);
+        String tenantId;
+        try {
+            Long tid = com.tencent.supersonic.common.context.TenantContext.getTenantId();
+            tenantId = tid != null ? String.valueOf(tid) : null;
+        } catch (Throwable ignore) {
+            tenantId = null;
+        }
+
         SqlGenStrategy sqlGenStrategy = SqlGenStrategyFactory.get(llmReq.getSqlGenType());
         String dataSet = llmReq.getSchema().getDataSetName();
-        LLMResp result = sqlGenStrategy.generate(llmReq);
-        result.setQuery(llmReq.getQueryText());
-        result.setDataSet(dataSet);
-        return result;
+        long startNanos = System.nanoTime();
+        String outcome =
+                com.tencent.supersonic.common.metrics.Nl2sqlMetricConstants.OUTCOME_SUCCESS;
+        LLMResp result = null;
+        try {
+            result = sqlGenStrategy.generate(llmReq);
+            if (result == null) {
+                outcome = com.tencent.supersonic.common.metrics.Nl2sqlMetricConstants.OUTCOME_EMPTY;
+            }
+            return result;
+        } catch (RuntimeException e) {
+            outcome = com.tencent.supersonic.common.metrics.Nl2sqlMetricConstants.OUTCOME_ERROR;
+            throw e;
+        } finally {
+            java.time.Duration elapsed = java.time.Duration.ofNanos(System.nanoTime() - startNanos);
+            String modelName =
+                    result != null && result.getModelName() != null ? result.getModelName()
+                            : "unknown";
+            if (metrics != null) {
+                metrics.recordLlmLatency(modelName, elapsed, outcome, tenantId, "unknown");
+                if (result != null) {
+                    metrics.recordLlmTokens(modelName, result.getPromptTokens(),
+                            result.getCompletionTokens());
+                }
+            }
+            if (result != null) {
+                result.setQuery(llmReq.getQueryText());
+                result.setDataSet(dataSet);
+            }
+        }
     }
 
     protected List<LLMReq.Term> getMappedTerms(ChatQueryContext queryCtx, Long dataSetId) {

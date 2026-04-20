@@ -20,7 +20,8 @@ class Nl2sqlMetricsTest {
     void setUp() {
         registry = new SimpleMeterRegistry();
         TenantTagNormalizer normalizer = new TenantTagNormalizer(List.of("acme"), 50, true);
-        metrics = new Nl2sqlMetrics(registry, normalizer);
+        metrics = new Nl2sqlMetrics(normalizer);
+        metrics.bindTo(registry);
     }
 
     @Test
@@ -87,8 +88,8 @@ class Nl2sqlMetricsTest {
 
     @Test
     void missingMeterRegistryIsNoop() {
-        Nl2sqlMetrics noop = new Nl2sqlMetrics((io.micrometer.core.instrument.MeterRegistry) null,
-                new TenantTagNormalizer(List.of(), 10, true));
+        // No bindTo() call — registry stays null, all record methods are no-ops.
+        Nl2sqlMetrics noop = new Nl2sqlMetrics(new TenantTagNormalizer(List.of(), 10, true));
 
         noop.recordStage("rule_parse", Duration.ofMillis(1), Nl2sqlMetricConstants.OUTCOME_SUCCESS,
                 "acme", "agent-1", "NL2SQLParser");

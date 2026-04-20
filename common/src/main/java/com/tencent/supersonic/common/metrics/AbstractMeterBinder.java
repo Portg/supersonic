@@ -8,12 +8,18 @@ import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 
 /**
- * Base class for {@link MeterBinder} implementations with common tags, guard condition, and error
- * handling. Inspired by microsphere-observability's AbstractMeterBinder.
+ * Base class for Micrometer metric components that bind to a registry and may register static or
+ * dynamic meters. Subclasses implement {@link #doBindTo(MeterRegistry)} for one-time static
+ * registrations (Gauge etc.), and use {@link #getRegistry()} / {@link #hasRegistry()} for dynamic
+ * Timer/Counter recording at runtime.
+ *
+ * <p>
+ * For purely dynamic metrics classes, {@code doBindTo} may be an empty body.
  */
 public abstract class AbstractMeterBinder implements MeterBinder {
 
     private final Iterable<Tag> tags;
+    private volatile MeterRegistry registry;
 
     protected AbstractMeterBinder() {
         this.tags = Tags.empty();
@@ -28,6 +34,7 @@ public abstract class AbstractMeterBinder implements MeterBinder {
         if (!supports(registry)) {
             return;
         }
+        this.registry = registry;
         try {
             doBindTo(registry);
         } catch (Exception e) {
@@ -42,9 +49,17 @@ public abstract class AbstractMeterBinder implements MeterBinder {
 
     protected abstract void doBindTo(MeterRegistry registry);
 
-    /**
-     * Returns common tags: constructor-provided tags + origin=subclass simple name.
-     */
+    /** Returns the MeterRegistry bound via {@link #bindTo}, or {@code null} if not yet bound. */
+    protected MeterRegistry getRegistry() {
+        return registry;
+    }
+
+    /** Returns {@code true} if a registry has been bound. */
+    protected boolean hasRegistry() {
+        return registry != null;
+    }
+
+    /** Returns common tags: constructor-provided tags + {@code origin=<subclass simple name>}. */
     protected Tags commonTags() {
         return Tags.of(tags).and("origin", getClass().getSimpleName());
     }

@@ -5,40 +5,36 @@ import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 @Component
-public class Nl2sqlMetrics {
+public class Nl2sqlMetrics extends AbstractMeterBinder {
 
-    private final MeterRegistry registry;
     private final TenantTagNormalizer tenantTagNormalizer;
 
-    @Autowired
-    public Nl2sqlMetrics(ObjectProvider<MeterRegistry> registryProvider,
-            TenantTagNormalizer tenantTagNormalizer) {
-        this(registryProvider.getIfAvailable(), tenantTagNormalizer);
+    public Nl2sqlMetrics(TenantTagNormalizer tenantTagNormalizer) {
+        this.tenantTagNormalizer = tenantTagNormalizer;
     }
 
-    public Nl2sqlMetrics(MeterRegistry registry, TenantTagNormalizer tenantTagNormalizer) {
-        this.registry = registry;
-        this.tenantTagNormalizer = tenantTagNormalizer;
+    @Override
+    protected void doBindTo(MeterRegistry registry) {
+        // Dynamic metrics only — no static registrations at bind time.
     }
 
     public void recordStage(String stage, Duration duration, String outcome, String tenantId,
             String agentId, String parserName) {
-        if (registry == null) {
+        if (!hasRegistry()) {
             return;
         }
+        MeterRegistry reg = getRegistry();
         Timer.builder(Nl2sqlMetricConstants.STAGE_DURATION)
-                .tags(baseTags(stage, outcome, tenantId, agentId, parserName)).register(registry)
+                .tags(baseTags(stage, outcome, tenantId, agentId, parserName)).register(reg)
                 .record(duration);
         Counter.builder(Nl2sqlMetricConstants.STAGE_OUTCOME_TOTAL)
-                .tags(baseTags(stage, outcome, tenantId, agentId, parserName)).register(registry)
+                .tags(baseTags(stage, outcome, tenantId, agentId, parserName)).register(reg)
                 .increment();
     }
 
@@ -48,7 +44,7 @@ public class Nl2sqlMetrics {
 
     public void recordLlmLatency(String model, Duration duration, String outcome, String tenantId,
             String agentId) {
-        if (registry == null) {
+        if (!hasRegistry()) {
             return;
         }
         Timer.builder(Nl2sqlMetricConstants.LLM_DURATION)
@@ -58,31 +54,32 @@ public class Nl2sqlMetrics {
                         tenantTagNormalizer.normalize(tenantId),
                         Nl2sqlMetricConstants.TagKeys.AGENT, safe(agentId),
                         Nl2sqlMetricConstants.TagKeys.MODULE, Nl2sqlMetricConstants.MODULE))
-                .register(registry).record(duration);
+                .register(getRegistry()).record(duration);
     }
 
     public void recordLlmTokens(String model, long promptTokens, long completionTokens) {
-        if (registry == null) {
+        if (!hasRegistry()) {
             return;
         }
+        MeterRegistry reg = getRegistry();
         if (promptTokens > 0) {
             Counter.builder(Nl2sqlMetricConstants.LLM_TOKENS_TOTAL)
                     .tags(Tags.of(Nl2sqlMetricConstants.TagKeys.MODEL, safe(model),
                             Nl2sqlMetricConstants.TagKeys.KIND, "prompt",
                             Nl2sqlMetricConstants.TagKeys.MODULE, Nl2sqlMetricConstants.MODULE))
-                    .register(registry).increment(promptTokens);
+                    .register(reg).increment(promptTokens);
         }
         if (completionTokens > 0) {
             Counter.builder(Nl2sqlMetricConstants.LLM_TOKENS_TOTAL)
                     .tags(Tags.of(Nl2sqlMetricConstants.TagKeys.MODEL, safe(model),
                             Nl2sqlMetricConstants.TagKeys.KIND, "completion",
                             Nl2sqlMetricConstants.TagKeys.MODULE, Nl2sqlMetricConstants.MODULE))
-                    .register(registry).increment(completionTokens);
+                    .register(reg).increment(completionTokens);
         }
     }
 
     public void recordMapperHit(String mapperName, boolean hit, String tenantId) {
-        if (registry == null) {
+        if (!hasRegistry()) {
             return;
         }
         Counter.builder(Nl2sqlMetricConstants.MAPPER_HITS_TOTAL)
@@ -91,26 +88,27 @@ public class Nl2sqlMetrics {
                         Nl2sqlMetricConstants.TagKeys.TENANT,
                         tenantTagNormalizer.normalize(tenantId),
                         Nl2sqlMetricConstants.TagKeys.MODULE, Nl2sqlMetricConstants.MODULE))
-                .register(registry).increment();
+                .register(getRegistry()).increment();
     }
 
     public void recordDb(String dbType, Duration duration, long rowsReturned, String outcome,
             String tenantId) {
-        if (registry == null) {
+        if (!hasRegistry()) {
             return;
         }
+        MeterRegistry reg = getRegistry();
         Timer.builder(Nl2sqlMetricConstants.DB_DURATION)
                 .tags(Tags.of(Nl2sqlMetricConstants.TagKeys.DB_TYPE, safe(dbType),
                         Nl2sqlMetricConstants.TagKeys.OUTCOME, safe(outcome),
                         Nl2sqlMetricConstants.TagKeys.TENANT,
                         tenantTagNormalizer.normalize(tenantId),
                         Nl2sqlMetricConstants.TagKeys.MODULE, Nl2sqlMetricConstants.MODULE))
-                .register(registry).record(duration);
+                .register(reg).record(duration);
         if (rowsReturned >= 0) {
             DistributionSummary.builder(Nl2sqlMetricConstants.DB_ROWS_RETURNED)
                     .tags(Tags.of(Nl2sqlMetricConstants.TagKeys.DB_TYPE, safe(dbType),
                             Nl2sqlMetricConstants.TagKeys.MODULE, Nl2sqlMetricConstants.MODULE))
-                    .register(registry).record(rowsReturned);
+                    .register(reg).record(rowsReturned);
         }
     }
 
@@ -174,9 +172,10 @@ public class Nl2sqlMetrics {
                 return;
             }
             stopped = true;
-            if (owner.registry == null) {
+            if (!owner.hasRegistry()) {
                 return;
             }
+            MeterRegistry reg = owner.getRegistry();
             Duration d = Duration.ofNanos(System.nanoTime() - startNanos);
             Tags tags = owner.baseTags(stage, outcome, tenantId, agentId, parserName);
             if (mapperName != null) {
@@ -185,10 +184,10 @@ public class Nl2sqlMetrics {
             if (correctorName != null) {
                 tags = tags.and(Nl2sqlMetricConstants.TagKeys.CORRECTOR, correctorName);
             }
-            Timer.builder(Nl2sqlMetricConstants.STAGE_DURATION).tags(tags).register(owner.registry)
+            Timer.builder(Nl2sqlMetricConstants.STAGE_DURATION).tags(tags).register(reg)
                     .record(d.toNanos(), TimeUnit.NANOSECONDS);
-            Counter.builder(Nl2sqlMetricConstants.STAGE_OUTCOME_TOTAL).tags(tags)
-                    .register(owner.registry).increment();
+            Counter.builder(Nl2sqlMetricConstants.STAGE_OUTCOME_TOTAL).tags(tags).register(reg)
+                    .increment();
         }
     }
 }

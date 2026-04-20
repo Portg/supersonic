@@ -371,6 +371,12 @@ const ROUTES = [
         component: './Platform/TenantQuotaManagement',
         access: ROUTE_AUTH_CODES.PLATFORM_QUOTA,
       },
+      {
+        path: '/platform/llm-usage',
+        name: 'llmUsage',
+        component: './LlmUsage',
+        access: ROUTE_AUTH_CODES.PLATFORM_ADMIN,
+      },
     ],
   },
   {

@@ -12,7 +12,7 @@ import com.tencent.supersonic.headless.api.pojo.response.ReportDeliveryConfigRes
 import com.tencent.supersonic.headless.api.pojo.response.ReportDeliveryRecordResp;
 import com.tencent.supersonic.headless.api.service.ReportDeliveryService;
 import com.tencent.supersonic.headless.api.service.delivery.DeliveryContext;
-import com.tencent.supersonic.headless.server.metrics.TemplateReportMetrics;
+import com.tencent.supersonic.headless.server.metrics.TemplateReportMeterBinder;
 import com.tencent.supersonic.headless.server.persistence.dataobject.ReportDeliveryConfigDO;
 import com.tencent.supersonic.headless.server.persistence.dataobject.ReportDeliveryRecordDO;
 import com.tencent.supersonic.headless.server.persistence.mapper.ReportDeliveryConfigMapper;
@@ -59,7 +59,7 @@ public class ReportDeliveryServiceImpl
     private final Map<DeliveryType, ReportDeliveryChannel> channelMap;
     private final DeliveryRateLimiter rateLimiter;
     @Autowired(required = false)
-    private TemplateReportMetrics reportMetrics;
+    private TemplateReportMeterBinder reportMetrics;
 
     public ReportDeliveryServiceImpl(ReportDeliveryRecordMapper recordMapper,
             List<ReportDeliveryChannel> channels, DeliveryRateLimiter rateLimiter) {

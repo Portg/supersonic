@@ -3,7 +3,7 @@ package com.tencent.supersonic.headless.server.task;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.tencent.supersonic.common.util.DateUtils;
 import com.tencent.supersonic.headless.api.service.delivery.DeliveryContext;
-import com.tencent.supersonic.headless.server.metrics.TemplateReportMetrics;
+import com.tencent.supersonic.headless.server.metrics.TemplateReportMeterBinder;
 import com.tencent.supersonic.headless.server.persistence.dataobject.ReportDeliveryConfigDO;
 import com.tencent.supersonic.headless.server.persistence.dataobject.ReportDeliveryRecordDO;
 import com.tencent.supersonic.headless.server.persistence.dataobject.ReportExecutionDO;
@@ -46,7 +46,7 @@ public class DeliveryRetryTask {
     private final ReportScheduleMapper scheduleMapper;
     private final Map<DeliveryType, ReportDeliveryChannel> channelMap;
     @Autowired(required = false)
-    private TemplateReportMetrics reportMetrics;
+    private TemplateReportMeterBinder reportMetrics;
 
     public DeliveryRetryTask(ReportDeliveryRecordMapper recordMapper,
             ReportDeliveryConfigMapper configMapper, ReportExecutionMapper executionMapper,

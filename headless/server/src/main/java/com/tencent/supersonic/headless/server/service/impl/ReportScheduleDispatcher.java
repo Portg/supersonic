@@ -1,7 +1,7 @@
 package com.tencent.supersonic.headless.server.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.tencent.supersonic.headless.server.metrics.TemplateReportMetrics;
+import com.tencent.supersonic.headless.server.metrics.TemplateReportMeterBinder;
 import com.tencent.supersonic.headless.server.persistence.dataobject.ReportExecutionDO;
 import com.tencent.supersonic.headless.server.persistence.dataobject.ReportScheduleDO;
 import com.tencent.supersonic.headless.server.persistence.mapper.ReportExecutionMapper;
@@ -26,7 +26,7 @@ public class ReportScheduleDispatcher {
     private final ReportExecutionOrchestrator orchestrator;
     private final ReportExecutionContextBuilder contextBuilder;
     @Autowired(required = false)
-    private TemplateReportMetrics reportMetrics;
+    private TemplateReportMeterBinder reportMetrics;
 
     @Value("${s2.report.schedule.max-concurrent-per-tenant:5}")
     private int maxConcurrentPerTenant;

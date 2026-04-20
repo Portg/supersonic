@@ -5,29 +5,46 @@ import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * NL2SQL pipeline metrics, unified into the {@link AbstractMeterBinder} lifecycle.
+ *
+ * <p>
+ * The registry is captured during {@link #doBindTo} (called automatically by Spring Boot for every
+ * {@link io.micrometer.core.instrument.binder.MeterBinder}). If no MeterRegistry is available, all
+ * public record methods are no-ops.
+ * </p>
+ */
 @Component
-public class Nl2sqlMetrics {
+public class Nl2sqlMetrics extends AbstractMeterBinder {
 
-    private final MeterRegistry registry;
     private final TenantTagNormalizer tenantTagNormalizer;
+    private volatile MeterRegistry registry;
 
-    @Autowired
-    public Nl2sqlMetrics(ObjectProvider<MeterRegistry> registryProvider,
-            TenantTagNormalizer tenantTagNormalizer) {
-        this(registryProvider.getIfAvailable(), tenantTagNormalizer);
+    public Nl2sqlMetrics(TenantTagNormalizer tenantTagNormalizer) {
+        super(Tags.of(Nl2sqlMetricConstants.TagKeys.MODULE, Nl2sqlMetricConstants.MODULE));
+        this.tenantTagNormalizer = tenantTagNormalizer;
     }
 
+    /**
+     * Test-friendly constructor: pass a registry directly (bypasses MeterBinder lifecycle).
+     */
     public Nl2sqlMetrics(MeterRegistry registry, TenantTagNormalizer tenantTagNormalizer) {
+        super(Tags.of(Nl2sqlMetricConstants.TagKeys.MODULE, Nl2sqlMetricConstants.MODULE));
         this.registry = registry;
         this.tenantTagNormalizer = tenantTagNormalizer;
     }
+
+    @Override
+    protected void doBindTo(MeterRegistry registry) {
+        this.registry = registry;
+    }
+
+    // ---- public recording methods (no-op when registry is null) ----
 
     public void recordStage(String stage, Duration duration, String outcome, String tenantId,
             String agentId, String parserName) {

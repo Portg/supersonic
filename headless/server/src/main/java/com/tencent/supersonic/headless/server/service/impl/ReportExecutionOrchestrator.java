@@ -24,7 +24,7 @@ import com.tencent.supersonic.headless.api.pojo.response.SemanticSchemaResp;
 import com.tencent.supersonic.headless.api.service.ReportDeliveryService;
 import com.tencent.supersonic.headless.api.service.SchemaService;
 import com.tencent.supersonic.headless.api.service.delivery.DeliveryContext;
-import com.tencent.supersonic.headless.server.metrics.TemplateReportMetrics;
+import com.tencent.supersonic.headless.server.metrics.TemplateReportMeterBinder;
 import com.tencent.supersonic.headless.server.persistence.dataobject.ReportExecutionDO;
 import com.tencent.supersonic.headless.server.persistence.mapper.ReportExecutionMapper;
 import com.tencent.supersonic.headless.server.pojo.ExecutionSnapshotData;
@@ -73,7 +73,7 @@ public class ReportExecutionOrchestrator {
     private ReportDeliveryService deliveryService;
 
     @Autowired(required = false)
-    private TemplateReportMetrics reportMetrics;
+    private TemplateReportMeterBinder reportMetrics;
 
     @Value("${supersonic.export.local-dir:${java.io.tmpdir}/supersonic-export}")
     private String exportDir;

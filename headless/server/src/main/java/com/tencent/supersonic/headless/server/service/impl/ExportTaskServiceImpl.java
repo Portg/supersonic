@@ -20,7 +20,7 @@ import com.tencent.supersonic.headless.api.pojo.request.SemanticQueryReq;
 import com.tencent.supersonic.headless.api.pojo.response.DataSetResp;
 import com.tencent.supersonic.headless.api.pojo.response.SemanticQueryResp;
 import com.tencent.supersonic.headless.api.service.DataSetService;
-import com.tencent.supersonic.headless.server.metrics.TemplateReportMetrics;
+import com.tencent.supersonic.headless.server.metrics.TemplateReportMeterBinder;
 import com.tencent.supersonic.headless.server.persistence.dataobject.ExportTaskDO;
 import com.tencent.supersonic.headless.server.persistence.mapper.ExportTaskMapper;
 import com.tencent.supersonic.headless.server.pojo.ExportTaskStatus;
@@ -59,7 +59,7 @@ public class ExportTaskServiceImpl extends ServiceImpl<ExportTaskMapper, ExportT
     private final FileStorage fileStorage;
     private final StorageProperties storageProperties;
     @Autowired(required = false)
-    private TemplateReportMetrics reportMetrics;
+    private TemplateReportMeterBinder reportMetrics;
 
     @Value("${supersonic.export.async-threshold:10000}")
     private long asyncThreshold;

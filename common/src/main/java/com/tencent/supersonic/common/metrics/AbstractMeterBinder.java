@@ -9,32 +9,43 @@ import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 
 /**
- * Base class for Micrometer metric components that bind to a registry and may register static or
- * dynamic meters. Subclasses implement {@link #doBindTo(MeterRegistry)} for one-time static
- * registrations (Gauge etc.), and use {@link #getRegistry()} / {@link #hasRegistry()} for dynamic
- * Timer/Counter recording at runtime.
+ * Base class for {@link MeterBinder} implementations with common tags, guard condition, and error
+ * handling.
  *
  * <p>
- * For purely dynamic metrics classes, {@code doBindTo} may be an empty body.
+ * Design aligned with microsphere-observability's {@code AbstractMeterBinder}:
+ * <ul>
+ * <li>Template-method pattern: {@link #bindTo} → {@link #supports} → {@link #doBindTo}</li>
+ * <li>Automatic "origin" tag derived from subclass simple name, baked at construction</li>
+ * <li>{@link #combine(String...)} helper for ad-hoc tag extension</li>
+ * <li>{@link #getRegistry()} / {@link #hasRegistry()} for dynamic metric recording</li>
+ * <li>Protected {@link Logger} for subclass use</li>
+ * </ul>
  */
 public abstract class AbstractMeterBinder implements MeterBinder {
 
+    /**
+     * The {@link Tag} key of the metrics origin.
+     */
+    public static final String ORIGIN_TAG_KEY = "origin";
+
     protected final Logger logger = LoggerFactory.getLogger(getClass());
 
-    private final Iterable<Tag> tags;
+    protected final Iterable<Tag> tags;
     private volatile MeterRegistry registry;
 
     protected AbstractMeterBinder() {
-        this.tags = Tags.empty();
+        this.tags = Tags.of(ORIGIN_TAG_KEY, getClass().getSimpleName());
     }
 
     protected AbstractMeterBinder(Iterable<Tag> tags) {
-        this.tags = tags;
+        this.tags = Tags.of(tags).and(ORIGIN_TAG_KEY, getClass().getSimpleName());
     }
 
     @Override
     public final void bindTo(@NonNull MeterRegistry registry) {
         if (!supports(registry)) {
+            logger.info("Metrics not supported for registry [{}]", registry.getClass().getName());
             return;
         }
         this.registry = registry;
@@ -45,11 +56,18 @@ public abstract class AbstractMeterBinder implements MeterBinder {
         }
     }
 
+    /**
+     * Override to restrict which registries this binder supports.
+     */
     protected boolean supports(MeterRegistry registry) {
         return true;
     }
 
-    protected abstract void doBindTo(MeterRegistry registry);
+    /**
+     * Register meters with the given registry. Subclasses implement this instead of
+     * {@link #bindTo}.
+     */
+    protected abstract void doBindTo(MeterRegistry registry) throws Exception;
 
     /** Returns the MeterRegistry bound via {@link #bindTo}, or {@code null} if not yet bound. */
     protected MeterRegistry getRegistry() {
@@ -61,8 +79,20 @@ public abstract class AbstractMeterBinder implements MeterBinder {
         return registry != null;
     }
 
-    /** Returns common tags: constructor-provided tags + {@code origin=<subclass simple name>}. */
+    /**
+     * Returns common tags: constructor-provided tags merged with origin tag.
+     */
     protected Tags commonTags() {
-        return Tags.of(tags).and("origin", getClass().getSimpleName());
+        return Tags.of(tags);
+    }
+
+    /**
+     * Combines the base tags with additional key-value pairs.
+     *
+     * @param additionalTags key-value pairs (must be even length)
+     * @return merged tag set
+     */
+    protected Tags combine(String... additionalTags) {
+        return Tags.of(tags).and(additionalTags);
     }
 }

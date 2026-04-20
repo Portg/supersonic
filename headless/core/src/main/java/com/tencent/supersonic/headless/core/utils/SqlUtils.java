@@ -114,8 +114,9 @@ public class SqlUtils {
                 .withUsername(database.getUsername()).withPassword(database.getPassword())
                 .withJdbcDataSource(this.jdbcDataSource).withResultLimit(this.resultLimit)
                 .withIsQueryLogEnable(this.isQueryLogEnable).withQueryTimeout(this.queryTimeout)
-                .withPoolType(poolType).withPoolMaxActive(maxActive).withPoolMaxWaitMs(maxWaitMs)
-                .build();
+                .withTenantQuotaService(this.tenantQuotaService)
+                .withQuotaAcquireTimeoutMs(this.quotaAcquireTimeoutMs).withPoolType(poolType)
+                .withPoolMaxActive(maxActive).withPoolMaxWaitMs(maxWaitMs).build();
     }
 
     public List<Map<String, Object>> execute(String sql) throws ServerException {
@@ -229,6 +230,8 @@ public class SqlUtils {
     public static final class SqlUtilsBuilder {
 
         private JdbcDataSource jdbcDataSource;
+        private TenantQuotaService tenantQuotaService;
+        private long quotaAcquireTimeoutMs;
         private int resultLimit;
         private boolean isQueryLogEnable;
         private int queryTimeout;
@@ -264,6 +267,16 @@ public class SqlUtils {
 
         SqlUtilsBuilder withQueryTimeout(int queryTimeout) {
             this.queryTimeout = queryTimeout;
+            return this;
+        }
+
+        SqlUtilsBuilder withTenantQuotaService(TenantQuotaService tenantQuotaService) {
+            this.tenantQuotaService = tenantQuotaService;
+            return this;
+        }
+
+        SqlUtilsBuilder withQuotaAcquireTimeoutMs(long quotaAcquireTimeoutMs) {
+            this.quotaAcquireTimeoutMs = quotaAcquireTimeoutMs;
             return this;
         }
 
@@ -317,6 +330,8 @@ public class SqlUtils {
             sqlUtils.resultLimit = this.resultLimit;
             sqlUtils.isQueryLogEnable = this.isQueryLogEnable;
             sqlUtils.queryTimeout = this.queryTimeout;
+            sqlUtils.tenantQuotaService = this.tenantQuotaService;
+            sqlUtils.quotaAcquireTimeoutMs = this.quotaAcquireTimeoutMs;
             sqlUtils.jdbcDataSourceUtils = new JdbcDataSourceUtils(this.jdbcDataSource);
             sqlUtils.poolType = this.poolType;
             sqlUtils.poolMaxActive = this.poolMaxActive;

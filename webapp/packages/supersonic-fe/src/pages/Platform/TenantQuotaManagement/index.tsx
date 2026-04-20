@@ -32,7 +32,9 @@ const TenantQuotaManagement: React.FC = () => {
   const loadQuotas = async () => {
     setLoading(true);
     try {
-      const { code, data } = await listTenantQuotas();
+      const res: any = await listTenantQuotas();
+      const code = res?.code ?? 200;
+      const data = Array.isArray(res) ? res : res?.data;
       if (code === 200 && data) {
         setQuotas(data);
       }
@@ -49,7 +51,7 @@ const TenantQuotaManagement: React.FC = () => {
     form.setFieldsValue({
       jdbcConcurrent: 10,
       llmConcurrent: 5,
-      monthlyQueryCount: 10000,
+      monthlyQueryCount: 0,
       acquireTimeoutMs: 5000,
       enabled: true,
     });
@@ -64,7 +66,8 @@ const TenantQuotaManagement: React.FC = () => {
 
   const handleDelete = async (tenantId: number) => {
     try {
-      const { code } = await deleteTenantQuota(tenantId);
+      const res: any = await deleteTenantQuota(tenantId);
+      const code = res?.code ?? 200;
       if (code === 200) {
         message.success(MSG.DELETE_SUCCESS);
         loadQuotas();
@@ -80,9 +83,10 @@ const TenantQuotaManagement: React.FC = () => {
       setLoading(true);
 
       const tenantId = editingQuota ? editingQuota.tenantId : values.tenantId;
-      const result = await upsertTenantQuota(tenantId, values);
+      const result: any = await upsertTenantQuota(tenantId, values);
+      const code = result?.code ?? 200;
 
-      if (result.code === 200) {
+      if (code === 200) {
         message.success(editingQuota ? MSG.UPDATE_SUCCESS : MSG.CREATE_SUCCESS);
         setModalVisible(false);
         loadQuotas();
@@ -120,7 +124,7 @@ const TenantQuotaManagement: React.FC = () => {
       dataIndex: 'monthlyQueryCount',
       key: 'monthlyQueryCount',
       width: 130,
-      render: (val: number) => (val === -1 ? '不限' : val),
+      render: (val: number) => (val === 0 ? '不限' : val),
     },
     {
       title: '超时(ms)',
@@ -231,10 +235,10 @@ const TenantQuotaManagement: React.FC = () => {
             <Form.Item
               name="monthlyQueryCount"
               label="每月查询上限"
-              tooltip="-1表示不限"
+              tooltip="0 表示不限"
               rules={[{ required: true, message: '请输入每月查询上限' }]}
             >
-              <InputNumber min={-1} placeholder="10000" />
+              <InputNumber min={0} placeholder="0" />
             </Form.Item>
             <Form.Item
               name="acquireTimeoutMs"

@@ -14,3 +14,19 @@ CREATE TABLE IF NOT EXISTS `s2_tenant_quota` (
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_tenant_quota_tenant_id` (`tenant_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Per-tenant concurrency quota overrides';
+
+INSERT INTO `s2_permission` (`code`, `name`, `description`, `scope`, `type`, `path`, `status`, `created_by`)
+VALUES
+('PLATFORM_QUOTA', '租户配额管理', '管理租户并发配额', 'PLATFORM', 'MENU', '/platform/tenant-quotas', 1, 'system')
+AS new_val ON DUPLICATE KEY UPDATE
+    `name` = new_val.`name`,
+    `description` = new_val.`description`,
+    `scope` = new_val.`scope`,
+    `type` = new_val.`type`,
+    `path` = new_val.`path`;
+
+INSERT INTO `s2_role_permission` (`role_id`, `permission_id`, `created_by`)
+SELECT r.id, p.id, 'system'
+FROM `s2_role` r, `s2_permission` p
+WHERE r.code = 'PLATFORM_SUPER_ADMIN' AND p.code = 'PLATFORM_QUOTA'
+ON DUPLICATE KEY UPDATE `role_id` = `role_id`;

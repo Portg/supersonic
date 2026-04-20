@@ -30,6 +30,7 @@ const ROUTE_AUTH_CODES = (exports.ROUTE_AUTH_CODES = {
   PLATFORM_ROLE_MANAGE: 'PLATFORM_ROLE_MANAGE',         // 平台角色管理
   PLATFORM_PERMISSION: 'PLATFORM_PERMISSION',           // 平台权限管理
   PLATFORM_SETTINGS: 'PLATFORM_SETTINGS',               // 系统设置
+  PLATFORM_QUOTA: 'PLATFORM_QUOTA',                     // 租户配额管理
 
   // ========== 租户级权限 (Tenant RBAC) ==========
   TENANT_ADMIN: 'TENANT_ADMIN',                         // 租户管理员
@@ -366,6 +367,12 @@ const ROUTES = [
         name: 'platformSettings',
         component: './System',
         access: ROUTE_AUTH_CODES.PLATFORM_SETTINGS,
+      },
+      {
+        path: '/platform/tenant-quotas',
+        name: '租户配额',
+        component: './Platform/TenantQuotaManagement',
+        access: ROUTE_AUTH_CODES.PLATFORM_QUOTA,
       },
     ],
   },

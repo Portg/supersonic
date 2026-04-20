@@ -19,6 +19,8 @@ key-files:
 - 公平信号量，`tryAcquire(timeoutMs)`，超时抛 `TooManyRequestsException`。
 - 只在 `SqlUtils#queryInternal` 这个唯一汇聚点 acquire/release；HTTP 层不重复计数。
 - 过滤器将异常转 HTTP 429 + `Retry-After`。
+- `TenantContext` 为空时回退到 `s2.tenant.quota.fallback-tenant-id`。
+- 单租户覆盖 `enabled=false` 表示该租户 bypass，不回退默认限额。
 - Micrometer 指标 `s2_tenant_jdbc_permits_available` / `s2_tenant_jdbc_permits_waiting`。
 
 ## 配置

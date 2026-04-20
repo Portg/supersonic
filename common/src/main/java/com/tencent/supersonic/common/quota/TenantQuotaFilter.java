@@ -19,13 +19,24 @@ public class TenantQuotaFilter implements Filter {
         } catch (TooManyRequestsException e) {
             write429(response, e.getTenantId(), e.getRetryAfterSeconds());
         } catch (RuntimeException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof TooManyRequestsException tmre) {
+            TooManyRequestsException tmre = findTooManyRequests(e);
+            if (tmre != null) {
                 write429(response, tmre.getTenantId(), tmre.getRetryAfterSeconds());
                 return;
             }
             throw e;
         }
+    }
+
+    private TooManyRequestsException findTooManyRequests(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof TooManyRequestsException tmre) {
+                return tmre;
+            }
+            current = current.getCause();
+        }
+        return null;
     }
 
     private void write429(ServletResponse response, Long tenantId, int retryAfterSeconds)

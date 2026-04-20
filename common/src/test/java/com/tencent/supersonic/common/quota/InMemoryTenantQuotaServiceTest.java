@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -34,11 +35,30 @@ class InMemoryTenantQuotaServiceTest {
     }
 
     @Test
-    void nullTenantReturnsNoopPermit() {
+    void nullTenantUsesFallbackTenantQuota() {
         InMemoryTenantQuotaService svc =
                 new InMemoryTenantQuotaService(configWithDefault(1, 100), tid -> null);
         try (TenantPermit p = svc.acquireJdbc(null, 100)) {
             assertNotNull(p);
+            assertEquals(0L, p.getTenantId());
+            assertEquals(0, svc.availablePermits().get(0L));
+        }
+    }
+
+    @Test
+    void disabledTenantOverrideBypassesQuota() {
+        InMemoryTenantQuotaService svc =
+                new InMemoryTenantQuotaService(configWithDefault(1, 100), tid -> {
+                    TenantQuotaOverride o = new TenantQuotaOverride();
+                    o.setEnabled(false);
+                    return o;
+                });
+
+        try (TenantPermit first = svc.acquireJdbc(8L, 1);
+                TenantPermit second = svc.acquireJdbc(8L, 1)) {
+            assertNotNull(first);
+            assertNotNull(second);
+            assertFalse(svc.availablePermits().containsKey(8L));
         }
     }
 

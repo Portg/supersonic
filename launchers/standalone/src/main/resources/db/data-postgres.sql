@@ -140,6 +140,7 @@ VALUES
 (103, '平台角色管理', 'PLATFORM_ROLE_MANAGE', 'MENU', 100, '/platform/roles', 'UserSwitchOutlined', 3, '管理平台级角色', 1, 'PLATFORM', 'system'),
 (104, '平台权限管理', 'PLATFORM_PERMISSION', 'MENU', 100, '/platform/permissions', 'SafetyCertificateOutlined', 4, '管理平台级权限', 1, 'PLATFORM', 'system'),
 (105, '系统设置', 'PLATFORM_SETTINGS', 'MENU', 100, '/platform/settings', 'SettingOutlined', 5, '系统全局配置', 1, 'PLATFORM', 'system'),
+(106, '租户配额管理', 'PLATFORM_QUOTA', 'MENU', 100, '/platform/tenant-quotas', 'DashboardOutlined', 6, '管理租户并发配额', 1, 'PLATFORM', 'system'),
 -- 租户级权限 (新增)
 (110, '租户管理入口', 'TENANT_ADMIN', 'MENU', NULL, '/tenant', 'BankOutlined', 110, '租户管理入口权限', 1, 'TENANT', 'system'),
 (111, '组织架构管理', 'TENANT_ORG_MANAGE', 'MENU', 110, '/tenant/organization', 'ApartmentOutlined', 1, '管理本租户组织架构', 1, 'TENANT', 'system'),
@@ -209,13 +210,13 @@ VALUES
 (5, 50), (5, 51), (5, 52), (5, 53),
 (5, 60), (5, 61), (5, 62), (5, 63),
 (5, 70), (5, 71), (5, 72), (5, 73), (5, 74),
-(5, 100), (5, 101), (5, 102), (5, 103), (5, 104), (5, 105)
+(5, 100), (5, 101), (5, 102), (5, 103), (5, 104), (5, 105), (5, 106)
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- PLATFORM_SUPER_ADMIN角色 (id=6): 平台超级管理员（所有平台权限）
 INSERT INTO s2_role_permission (role_id, permission_id)
 VALUES
-(6, 100), (6, 101), (6, 102), (6, 103), (6, 104), (6, 105),
+(6, 100), (6, 101), (6, 102), (6, 103), (6, 104), (6, 105), (6, 106),
 (6, 11), (6, 40), (6, 41), (6, 42), (6, 43)
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 

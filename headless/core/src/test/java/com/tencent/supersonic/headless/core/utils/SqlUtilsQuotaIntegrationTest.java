@@ -6,10 +6,12 @@ import com.tencent.supersonic.common.quota.TenantPermit;
 import com.tencent.supersonic.common.quota.TenantQuotaConfig;
 import com.tencent.supersonic.common.quota.TenantQuotaService;
 import com.tencent.supersonic.common.quota.TooManyRequestsException;
+import com.tencent.supersonic.headless.api.pojo.response.DatabaseResp;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -17,6 +19,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 class SqlUtilsQuotaIntegrationTest {
 
@@ -33,6 +36,21 @@ class SqlUtilsQuotaIntegrationTest {
         quotaService = new InMemoryTenantQuotaService(config, tid -> null);
         concurrent = new AtomicInteger();
         peakConcurrent = new AtomicInteger();
+    }
+
+    @Test
+    void initCarriesTenantQuotaDependenciesIntoSqlUtilsInstance() throws Exception {
+        SqlUtils root = new SqlUtils();
+        setField(root, "tenantQuotaService", quotaService);
+        setField(root, "quotaAcquireTimeoutMs", 123L);
+
+        DatabaseResp database = DatabaseResp.builder().id(1L).name("h2").type("h2")
+                .url("jdbc:h2:mem:test").username("sa").password("").build();
+
+        SqlUtils initialized = root.init(database);
+
+        assertSame(quotaService, getField(initialized, "tenantQuotaService"));
+        assertEquals(123L, getField(initialized, "quotaAcquireTimeoutMs"));
     }
 
     @AfterEach
@@ -81,5 +99,17 @@ class SqlUtilsQuotaIntegrationTest {
         assertEquals(2, accepted.get(), "exactly 2 concurrent queries accepted");
         assertEquals(3, rejected.get(), "exactly 3 queries rejected with 429");
         assertEquals(2, peakConcurrent.get(), "peak concurrency equals quota");
+    }
+
+    private void setField(Object target, String name, Object value) throws Exception {
+        Field field = SqlUtils.class.getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(target, value);
+    }
+
+    private Object getField(Object target, String name) throws Exception {
+        Field field = SqlUtils.class.getDeclaredField(name);
+        field.setAccessible(true);
+        return field.get(target);
     }
 }

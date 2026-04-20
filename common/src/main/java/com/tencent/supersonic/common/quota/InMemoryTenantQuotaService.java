@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -17,6 +18,7 @@ public class InMemoryTenantQuotaService implements TenantQuotaService {
     private final ConcurrentHashMap<Long, Semaphore> semaphores = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Long, Integer> sizes = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Long, Integer> timeouts = new ConcurrentHashMap<>();
+    private final Set<Long> bypassedTenants = ConcurrentHashMap.newKeySet();
 
     public InMemoryTenantQuotaService(TenantQuotaConfig config,
             Function<Long, TenantQuotaOverride> overrideLoader) {
@@ -26,33 +28,51 @@ public class InMemoryTenantQuotaService implements TenantQuotaService {
 
     @Override
     public TenantPermit acquireJdbc(Long tenantId, long timeoutMs) {
-        if (!config.isEnabled() || tenantId == null) {
+        if (!config.isEnabled()) {
             return TenantPermit.noop();
         }
-        Semaphore sem = semaphoreFor(tenantId);
+        Long effectiveTenantId = resolveTenantId(tenantId);
+        if (effectiveTenantId == null || bypassedTenants.contains(effectiveTenantId)) {
+            return TenantPermit.noop();
+        }
+        Semaphore sem = semaphoreFor(effectiveTenantId);
+        if (sem == null) {
+            return TenantPermit.noop();
+        }
         long effectiveTimeout = timeoutMs > 0 ? timeoutMs
-                : timeouts.getOrDefault(tenantId, config.getDefaultQuota().getAcquireTimeoutMs());
+                : timeouts.getOrDefault(effectiveTenantId,
+                        positive(config.getDefaultQuota().getAcquireTimeoutMs()));
         try {
             if (!sem.tryAcquire(effectiveTimeout, TimeUnit.MILLISECONDS)) {
                 int retryAfter = (int) Math.max(1, effectiveTimeout / 1000);
-                log.warn("[TenantQuota] 429 tenantId={} available={} waiting={}", tenantId,
+                log.warn("[TenantQuota] 429 tenantId={} available={} waiting={}", effectiveTenantId,
                         sem.availablePermits(), sem.getQueueLength());
-                throw new TooManyRequestsException(tenantId, retryAfter);
+                throw new TooManyRequestsException(effectiveTenantId, retryAfter);
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new TooManyRequestsException(tenantId, 1);
+            throw new TooManyRequestsException(effectiveTenantId, 1);
         }
-        return new TenantPermit(sem, tenantId);
+        return new TenantPermit(sem, effectiveTenantId);
     }
 
     @Override
     public void refresh(Long tenantId) {
+        if (tenantId == null) {
+            return;
+        }
         TenantQuotaOverride o = safeLoadOverride(tenantId);
-        int size = o != null && o.isEnabled() ? o.getJdbcConcurrent()
-                : config.getDefaultQuota().getJdbcConcurrent();
-        int timeout = o != null ? o.getAcquireTimeoutMs()
-                : config.getDefaultQuota().getAcquireTimeoutMs();
+        if (o != null && !o.isEnabled()) {
+            bypassedTenants.add(tenantId);
+            semaphores.remove(tenantId);
+            sizes.remove(tenantId);
+            timeouts.remove(tenantId);
+            log.info("[TenantQuota] bypassed tenantId={}", tenantId);
+            return;
+        }
+        bypassedTenants.remove(tenantId);
+        int size = effectiveJdbcConcurrent(o);
+        int timeout = effectiveAcquireTimeoutMs(o);
         semaphores.put(tenantId, new Semaphore(size, true));
         sizes.put(tenantId, size);
         timeouts.put(tenantId, timeout);
@@ -80,10 +100,15 @@ public class InMemoryTenantQuotaService implements TenantQuotaService {
 
     private Semaphore buildSemaphore(Long tenantId) {
         TenantQuotaOverride o = safeLoadOverride(tenantId);
-        int size = o != null && o.isEnabled() ? o.getJdbcConcurrent()
-                : config.getDefaultQuota().getJdbcConcurrent();
-        int timeout = o != null ? o.getAcquireTimeoutMs()
-                : config.getDefaultQuota().getAcquireTimeoutMs();
+        if (o != null && !o.isEnabled()) {
+            bypassedTenants.add(tenantId);
+            sizes.remove(tenantId);
+            timeouts.remove(tenantId);
+            return null;
+        }
+        bypassedTenants.remove(tenantId);
+        int size = effectiveJdbcConcurrent(o);
+        int timeout = effectiveAcquireTimeoutMs(o);
         sizes.put(tenantId, size);
         timeouts.put(tenantId, timeout);
         return new Semaphore(size, true);
@@ -97,5 +122,26 @@ public class InMemoryTenantQuotaService implements TenantQuotaService {
                     e.getMessage());
             return null;
         }
+    }
+
+    private Long resolveTenantId(Long tenantId) {
+        return tenantId != null ? tenantId : config.getFallbackTenantId();
+    }
+
+    private int effectiveJdbcConcurrent(TenantQuotaOverride override) {
+        int configured = override != null ? override.getJdbcConcurrent()
+                : config.getDefaultQuota().getJdbcConcurrent();
+        return positive(configured);
+    }
+
+    private int effectiveAcquireTimeoutMs(TenantQuotaOverride override) {
+        int configured = override != null && override.getAcquireTimeoutMs() > 0
+                ? override.getAcquireTimeoutMs()
+                : config.getDefaultQuota().getAcquireTimeoutMs();
+        return positive(configured);
+    }
+
+    private int positive(int value) {
+        return Math.max(1, value);
     }
 }

@@ -32,4 +32,25 @@ class TenantQuotaMeterBinderTest {
         assertEquals(3.0, available);
         assertEquals(0.0, waiting);
     }
+
+    @Test
+    void registersTenantGaugesDiscoveredAfterBinding() {
+        TenantQuotaConfig config = new TenantQuotaConfig();
+        config.setEnabled(true);
+        config.getDefaultQuota().setJdbcConcurrent(2);
+        config.getDefaultQuota().setAcquireTimeoutMs(100);
+        InMemoryTenantQuotaService svc = new InMemoryTenantQuotaService(config, tid -> null);
+
+        MeterRegistry registry = new SimpleMeterRegistry();
+        new TenantQuotaMeterBinder(svc).bindTo(registry);
+
+        svc.acquireJdbc(77L, 100).close();
+        registry.find("s2_tenant_quota_known_tenants").gauge().value();
+
+        Double available = registry.find("s2_tenant_jdbc_permits_available").tag("tenantId", "77")
+                .gauge().value();
+
+        assertNotNull(available);
+        assertEquals(2.0, available);
+    }
 }

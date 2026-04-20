@@ -19,12 +19,15 @@ Insert/upsert rows in `s2_tenant_quota`, or use admin REST:
 PUT /api/v1/admin/tenant-quotas/{tenantId}
 {
   "jdbcConcurrent": 20,
+  "llmConcurrent": 5,
+  "monthlyQueryCount": 0,
   "acquireTimeoutMs": 3000,
   "enabled": true
 }
 ```
 
 Live refresh is automatic (controller calls `TenantQuotaService.refresh(tenantId)`).
+Set `"enabled": false` to bypass quota for that tenant. `monthlyQueryCount=0` means unlimited and is not enforced in this MVP.
 
 ## Symptoms
 

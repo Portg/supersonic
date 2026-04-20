@@ -1,5 +1,6 @@
 package com.tencent.supersonic.headless.core.executor;
 
+import com.tencent.supersonic.common.quota.TooManyRequestsException;
 import com.tencent.supersonic.common.util.ContextUtils;
 import com.tencent.supersonic.headless.api.pojo.response.DatabaseResp;
 import com.tencent.supersonic.headless.api.pojo.response.SemanticQueryResp;
@@ -44,6 +45,8 @@ public class JdbcExecutor implements QueryExecutor {
             SqlUtils sqlUtil = sqlUtils.init(database);
             sqlUtil.queryInternal(queryStatement.getSql(), queryResultWithColumns);
             queryResultWithColumns.setSql(sql);
+        } catch (TooManyRequestsException e) {
+            throw e;
         } catch (Exception e) {
             log.error("queryInternal with error ", e);
             queryResultWithColumns.setErrorMsg(e.getMessage());

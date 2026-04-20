@@ -20,9 +20,15 @@ public class TenantQuotaMeterBinder extends AbstractMeterBinder {
     @Override
     protected void doBindTo(MeterRegistry registry) {
         this.registryRef = registry;
+        refreshTenantGauges();
+        Gauge.builder("s2_tenant_quota_known_tenants", service, s -> {
+            refreshTenantGauges();
+            return s.availablePermits().size();
+        }).description("Number of tenants with an active quota semaphore").register(registry);
+    }
+
+    private void refreshTenantGauges() {
         service.availablePermits().keySet().forEach(this::registerIfAbsent);
-        Gauge.builder("s2_tenant_quota_known_tenants", service, s -> s.availablePermits().size())
-                .description("Number of tenants with an active quota semaphore").register(registry);
     }
 
     private void registerIfAbsent(Long tenantId) {

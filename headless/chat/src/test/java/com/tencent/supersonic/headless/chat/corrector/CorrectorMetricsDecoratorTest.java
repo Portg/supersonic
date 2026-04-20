@@ -17,8 +17,8 @@ class CorrectorMetricsDecoratorTest {
     @Test
     void wrapsDelegateAndEmitsStageMetricWithCorrectorTag() {
         SimpleMeterRegistry registry = new SimpleMeterRegistry();
-        Nl2sqlMetrics metrics =
-                new Nl2sqlMetrics(registry, new TenantTagNormalizer(List.of(), 10, true));
+        Nl2sqlMetrics metrics = new Nl2sqlMetrics(new TenantTagNormalizer(List.of(), 10, true));
+        metrics.bindTo(registry);
 
         SemanticCorrector delegate = (ctx, info) -> {
             /* no-op */ };
@@ -34,8 +34,8 @@ class CorrectorMetricsDecoratorTest {
     @Test
     void recordsErrorOutcomeWhenDelegateThrows() {
         SimpleMeterRegistry registry = new SimpleMeterRegistry();
-        Nl2sqlMetrics metrics =
-                new Nl2sqlMetrics(registry, new TenantTagNormalizer(List.of(), 10, true));
+        Nl2sqlMetrics metrics = new Nl2sqlMetrics(new TenantTagNormalizer(List.of(), 10, true));
+        metrics.bindTo(registry);
 
         SemanticCorrector bad = (ctx, info) -> {
             throw new IllegalStateException("boom");

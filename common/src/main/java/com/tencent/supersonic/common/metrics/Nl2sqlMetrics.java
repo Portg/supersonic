@@ -16,6 +16,7 @@ public class Nl2sqlMetrics extends AbstractMeterBinder {
     private final TenantTagNormalizer tenantTagNormalizer;
 
     public Nl2sqlMetrics(TenantTagNormalizer tenantTagNormalizer) {
+        super(Tags.of(Nl2sqlMetricConstants.TagKeys.MODULE, Nl2sqlMetricConstants.MODULE));
         this.tenantTagNormalizer = tenantTagNormalizer;
     }
 
@@ -48,12 +49,11 @@ public class Nl2sqlMetrics extends AbstractMeterBinder {
             return;
         }
         Timer.builder(Nl2sqlMetricConstants.LLM_DURATION)
-                .tags(Tags.of(Nl2sqlMetricConstants.TagKeys.MODEL, safe(model),
+                .tags(tags(Nl2sqlMetricConstants.TagKeys.MODEL, safe(model),
                         Nl2sqlMetricConstants.TagKeys.OUTCOME, safe(outcome),
                         Nl2sqlMetricConstants.TagKeys.TENANT,
                         tenantTagNormalizer.normalize(tenantId),
-                        Nl2sqlMetricConstants.TagKeys.AGENT, safe(agentId),
-                        Nl2sqlMetricConstants.TagKeys.MODULE, Nl2sqlMetricConstants.MODULE))
+                        Nl2sqlMetricConstants.TagKeys.AGENT, safe(agentId)))
                 .register(getRegistry()).record(duration);
     }
 
@@ -64,16 +64,14 @@ public class Nl2sqlMetrics extends AbstractMeterBinder {
         MeterRegistry reg = getRegistry();
         if (promptTokens > 0) {
             Counter.builder(Nl2sqlMetricConstants.LLM_TOKENS_TOTAL)
-                    .tags(Tags.of(Nl2sqlMetricConstants.TagKeys.MODEL, safe(model),
-                            Nl2sqlMetricConstants.TagKeys.KIND, "prompt",
-                            Nl2sqlMetricConstants.TagKeys.MODULE, Nl2sqlMetricConstants.MODULE))
+                    .tags(tags(Nl2sqlMetricConstants.TagKeys.MODEL, safe(model),
+                            Nl2sqlMetricConstants.TagKeys.KIND, "prompt"))
                     .register(reg).increment(promptTokens);
         }
         if (completionTokens > 0) {
             Counter.builder(Nl2sqlMetricConstants.LLM_TOKENS_TOTAL)
-                    .tags(Tags.of(Nl2sqlMetricConstants.TagKeys.MODEL, safe(model),
-                            Nl2sqlMetricConstants.TagKeys.KIND, "completion",
-                            Nl2sqlMetricConstants.TagKeys.MODULE, Nl2sqlMetricConstants.MODULE))
+                    .tags(tags(Nl2sqlMetricConstants.TagKeys.MODEL, safe(model),
+                            Nl2sqlMetricConstants.TagKeys.KIND, "completion"))
                     .register(reg).increment(completionTokens);
         }
     }
@@ -83,11 +81,10 @@ public class Nl2sqlMetrics extends AbstractMeterBinder {
             return;
         }
         Counter.builder(Nl2sqlMetricConstants.MAPPER_HITS_TOTAL)
-                .tags(Tags.of(Nl2sqlMetricConstants.TagKeys.MAPPER, safe(mapperName),
+                .tags(tags(Nl2sqlMetricConstants.TagKeys.MAPPER, safe(mapperName),
                         Nl2sqlMetricConstants.TagKeys.HIT, String.valueOf(hit),
                         Nl2sqlMetricConstants.TagKeys.TENANT,
-                        tenantTagNormalizer.normalize(tenantId),
-                        Nl2sqlMetricConstants.TagKeys.MODULE, Nl2sqlMetricConstants.MODULE))
+                        tenantTagNormalizer.normalize(tenantId)))
                 .register(getRegistry()).increment();
     }
 
@@ -98,28 +95,29 @@ public class Nl2sqlMetrics extends AbstractMeterBinder {
         }
         MeterRegistry reg = getRegistry();
         Timer.builder(Nl2sqlMetricConstants.DB_DURATION)
-                .tags(Tags.of(Nl2sqlMetricConstants.TagKeys.DB_TYPE, safe(dbType),
+                .tags(tags(Nl2sqlMetricConstants.TagKeys.DB_TYPE, safe(dbType),
                         Nl2sqlMetricConstants.TagKeys.OUTCOME, safe(outcome),
                         Nl2sqlMetricConstants.TagKeys.TENANT,
-                        tenantTagNormalizer.normalize(tenantId),
-                        Nl2sqlMetricConstants.TagKeys.MODULE, Nl2sqlMetricConstants.MODULE))
+                        tenantTagNormalizer.normalize(tenantId)))
                 .register(reg).record(duration);
         if (rowsReturned >= 0) {
             DistributionSummary.builder(Nl2sqlMetricConstants.DB_ROWS_RETURNED)
-                    .tags(Tags.of(Nl2sqlMetricConstants.TagKeys.DB_TYPE, safe(dbType),
-                            Nl2sqlMetricConstants.TagKeys.MODULE, Nl2sqlMetricConstants.MODULE))
-                    .register(reg).record(rowsReturned);
+                    .tags(tags(Nl2sqlMetricConstants.TagKeys.DB_TYPE, safe(dbType))).register(reg)
+                    .record(rowsReturned);
         }
     }
 
-    Tags baseTags(String stage, String outcome, String tenantId, String agentId,
+    private Tags baseTags(String stage, String outcome, String tenantId, String agentId,
             String parserName) {
-        return Tags.of(Nl2sqlMetricConstants.TagKeys.STAGE, safe(stage),
+        return commonTags().and(Nl2sqlMetricConstants.TagKeys.STAGE, safe(stage),
                 Nl2sqlMetricConstants.TagKeys.OUTCOME, safe(outcome),
                 Nl2sqlMetricConstants.TagKeys.TENANT, tenantTagNormalizer.normalize(tenantId),
                 Nl2sqlMetricConstants.TagKeys.AGENT, safe(agentId),
-                Nl2sqlMetricConstants.TagKeys.PARSER, safe(parserName),
-                Nl2sqlMetricConstants.TagKeys.MODULE, Nl2sqlMetricConstants.MODULE);
+                Nl2sqlMetricConstants.TagKeys.PARSER, safe(parserName));
+    }
+
+    private Tags tags(String... tags) {
+        return commonTags().and(tags);
     }
 
     private static String safe(String v) {

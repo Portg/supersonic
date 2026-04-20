@@ -15,8 +15,9 @@ class NL2SQLParserMetricsTest {
     @Test
     void stageTimerProducesSampleWithParserTag() {
         SimpleMeterRegistry registry = new SimpleMeterRegistry();
-        TenantTagNormalizer normalizer = new TenantTagNormalizer(List.of("acme"), 10, true);
-        Nl2sqlMetrics metrics = new Nl2sqlMetrics(registry, normalizer);
+        Nl2sqlMetrics metrics =
+                new Nl2sqlMetrics(new TenantTagNormalizer(List.of("acme"), 10, true));
+        metrics.bindTo(registry);
 
         try (Nl2sqlMetrics.StageTimer t =
                 metrics.startStage("rule_parse", "acme", "agent-1", "NL2SQLParser")) {

@@ -24,7 +24,8 @@ class BaseMapperMetricsTest {
     @BeforeEach
     void setUp() {
         registry = new SimpleMeterRegistry();
-        metrics = new Nl2sqlMetrics(registry, new TenantTagNormalizer(List.of(), 50, true));
+        metrics = new Nl2sqlMetrics(new TenantTagNormalizer(List.of(), 50, true));
+        metrics.bindTo(registry);
         ApplicationContext ctx = mock(ApplicationContext.class);
         when(ctx.getBean(Nl2sqlMetrics.class)).thenReturn(metrics);
         new ContextUtils().setApplicationContext(ctx);

@@ -4,6 +4,7 @@ import com.tencent.supersonic.common.metrics.AbstractMeterBinder;
 import com.tencent.supersonic.common.metrics.ReportMetricConstants;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.springframework.stereotype.Component;
@@ -19,6 +20,10 @@ import java.util.concurrent.TimeUnit;
 public class TemplateReportMetrics extends AbstractMeterBinder {
 
     private static final MeterRegistry NOOP_REGISTRY = new SimpleMeterRegistry();
+
+    public TemplateReportMetrics() {
+        super(Tags.of(ReportMetricConstants.TagKeys.MODULE, ReportMetricConstants.MODULE));
+    }
 
     @Override
     protected void doBindTo(MeterRegistry registry) {
@@ -89,18 +94,14 @@ public class TemplateReportMetrics extends AbstractMeterBinder {
     }
 
     private Counter counter(String name, String... tags) {
-        return Counter.builder(name).tags(withModule(tags)).register(getRegistry());
+        return Counter.builder(name).tags(baseTags(tags)).register(getRegistry());
     }
 
     private Timer timer(String name, String... tags) {
-        return Timer.builder(name).tags(withModule(tags)).register(getRegistry());
+        return Timer.builder(name).tags(baseTags(tags)).register(getRegistry());
     }
 
-    private String[] withModule(String... tags) {
-        String[] merged = new String[tags.length + 2];
-        merged[0] = ReportMetricConstants.TagKeys.MODULE;
-        merged[1] = ReportMetricConstants.MODULE;
-        System.arraycopy(tags, 0, merged, 2, tags.length);
-        return merged;
+    private Tags baseTags(String... tags) {
+        return commonTags().and(tags);
     }
 }

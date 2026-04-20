@@ -55,6 +55,12 @@ management:
 | `supersonic_report_delivery_config_disabled` | Gauge | `tenant_id` | 因连续失败被自动禁用的推送配置数 |
 | `supersonic_nl2sql_latency_seconds` | Histogram | `parser_type`, `tenant_id` | NL2SQL 解析时延 |
 | `supersonic_query_cache_hit_total` | Counter | `cache_type` | 查询缓存命中次数 |
+| `s2_nl2sql_stage_duration_seconds` | Histogram | `stage`, `outcome`, `tenant_id`, `agent_id`, `parser_name` | NL2SQL 阶段级时延（rule/llm/mapper/corrector）|
+| `s2_nl2sql_llm_duration_seconds` | Histogram | `model`, `outcome`, `tenant_id` | LLM 调用时延 |
+| `s2_nl2sql_llm_tokens_total` | Counter | `model`, `kind` (prompt/completion) | LLM Token 消耗 |
+| `s2_nl2sql_mapper_hits_total` | Counter | `mapper_name`, `hit` | 各 Mapper 策略命中计数 |
+| `s2_nl2sql_db_duration_seconds` | Histogram | `db_type`, `outcome` | DB 执行时延 |
+| `s2_nl2sql_sql_rows_scanned` | Summary | `db_type` | 单次 SQL 扫描行数 |
 
 ### 2.3 多租户指标隔离
 

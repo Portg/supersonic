@@ -48,7 +48,7 @@ public abstract class AbstractMeterBinder implements MeterBinder {
         }
         try {
             doBindTo(registry);
-        } catch (Throwable e) {
+        } catch (Exception e) {
             logger.error("Failed to bind to MeterRegistry[{}]", registry, e);
         }
     }
@@ -64,7 +64,7 @@ public abstract class AbstractMeterBinder implements MeterBinder {
      * Register meters with the given registry. Subclasses implement this instead of
      * {@link #bindTo}.
      */
-    protected abstract void doBindTo(MeterRegistry registry) throws Throwable;
+    protected abstract void doBindTo(MeterRegistry registry) throws Exception;
 
     /**
      * Returns common tags: constructor-provided tags merged with origin tag.

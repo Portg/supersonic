@@ -142,12 +142,9 @@ public class TemplateReportMeterBinder extends AbstractMeterBinder {
         return Timer.builder(name).tags(withModule(tags)).register(registry);
     }
 
-    private String[] withModule(String... tags) {
-        String[] merged = new String[tags.length + 2];
-        merged[0] = ReportMetricConstants.TagKeys.MODULE;
-        merged[1] = ReportMetricConstants.MODULE;
-        System.arraycopy(tags, 0, merged, 2, tags.length);
-        return merged;
+    private Tags withModule(String... tags) {
+        return Tags.of(ReportMetricConstants.TagKeys.MODULE, ReportMetricConstants.MODULE)
+                .and(tags);
     }
 
     // ---- gauge value suppliers ----

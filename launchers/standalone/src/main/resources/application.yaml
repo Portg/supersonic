@@ -239,6 +239,14 @@ s2:
       # Health and monitoring
       - /health
       - /actuator/**
+    # Per-tenant concurrency quota (P1-5). Opt-in; default OFF.
+    quota:
+      enabled: ${S2_TENANT_QUOTA_ENABLED:false}
+      fallback-tenant-id: 0
+      default-quota:
+        jdbc-concurrent: ${S2_TENANT_QUOTA_JDBC:10}
+        llm-concurrent: ${S2_TENANT_QUOTA_LLM:5}
+        acquire-timeout-ms: ${S2_TENANT_QUOTA_ACQUIRE_MS:2000}
   # Feishu bot configuration
   feishu:
     enabled: ${FEISHU_ENABLED:false}

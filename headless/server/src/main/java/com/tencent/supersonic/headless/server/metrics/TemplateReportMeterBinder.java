@@ -16,6 +16,7 @@ import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.springframework.stereotype.Component;
 
 import java.util.Objects;
@@ -26,17 +27,19 @@ import java.util.concurrent.TimeUnit;
  *
  * <p>
  * Registers P0 gauges during {@link #doBindTo} and exposes helper methods for recording counters
- * and timers. Merges the previous {@code TemplateReportMetrics} standalone component into the
- * {@link AbstractMeterBinder} lifecycle so all report metrics are managed consistently.
+ * and timers. All meters share the same {@code commonTags()} (module + origin) inherited from
+ * {@link AbstractMeterBinder}, so Prometheus output is consistent across gauges, counters and
+ * timers.
  * </p>
  */
 @Component
 public class TemplateReportMeterBinder extends AbstractMeterBinder {
 
+    private static final MeterRegistry NOOP_REGISTRY = new SimpleMeterRegistry();
+
     private final ExportTaskMapper exportTaskMapper;
     private final ReportDeliveryRecordMapper deliveryRecordMapper;
     private final ReportDeliveryConfigMapper deliveryConfigMapper;
-    private volatile MeterRegistry registry;
 
     public TemplateReportMeterBinder(ExportTaskMapper exportTaskMapper,
             ReportDeliveryRecordMapper deliveryRecordMapper,
@@ -49,8 +52,6 @@ public class TemplateReportMeterBinder extends AbstractMeterBinder {
 
     @Override
     protected void doBindTo(MeterRegistry registry) {
-        this.registry = registry;
-
         Gauge.builder(ReportMetricConstants.EXPORT_PENDING, exportTaskMapper,
                 this::countExportPending).description("Count of pending export tasks")
                 .tags(commonTags()).strongReference(true).register(registry);
@@ -66,14 +67,15 @@ public class TemplateReportMeterBinder extends AbstractMeterBinder {
                 .strongReference(true).register(registry);
     }
 
-    // ---- counter / timer helpers (previously in TemplateReportMetrics) ----
+    // ---- counter / timer helpers ----
 
     public Timer.Sample startTimer() {
-        return registry != null ? Timer.start(registry) : null;
+        MeterRegistry reg = getRegistry();
+        return Timer.start(reg != null ? reg : NOOP_REGISTRY);
     }
 
     public void recordScheduleDispatch(String result) {
-        if (registry == null) {
+        if (!hasRegistry()) {
             return;
         }
         counter(ReportMetricConstants.SCHEDULE_DISPATCH_TOTAL, ReportMetricConstants.TagKeys.RESULT,
@@ -81,27 +83,25 @@ public class TemplateReportMeterBinder extends AbstractMeterBinder {
     }
 
     public void recordScheduleRetryExhausted() {
-        if (registry == null) {
+        if (!hasRegistry()) {
             return;
         }
         counter(ReportMetricConstants.SCHEDULE_RETRY_EXHAUSTED_TOTAL).increment();
     }
 
     public void recordExecution(String result, String source, Timer.Sample sample) {
-        if (registry == null) {
+        if (!hasRegistry() || sample == null) {
             return;
         }
         counter(ReportMetricConstants.EXECUTION_TOTAL, ReportMetricConstants.TagKeys.RESULT, result,
                 ReportMetricConstants.TagKeys.SOURCE, source).increment();
-        if (sample != null) {
-            sample.stop(timer(ReportMetricConstants.EXECUTION_DURATION,
-                    ReportMetricConstants.TagKeys.RESULT, result,
-                    ReportMetricConstants.TagKeys.SOURCE, source));
-        }
+        sample.stop(timer(ReportMetricConstants.EXECUTION_DURATION,
+                ReportMetricConstants.TagKeys.RESULT, result, ReportMetricConstants.TagKeys.SOURCE,
+                source));
     }
 
     public void recordDelivery(String result, String type, long durationMs) {
-        if (registry == null) {
+        if (!hasRegistry()) {
             return;
         }
         counter(ReportMetricConstants.DELIVERY_TOTAL, ReportMetricConstants.TagKeys.RESULT, result,
@@ -111,7 +111,7 @@ public class TemplateReportMeterBinder extends AbstractMeterBinder {
     }
 
     public void recordDeliveryRetry(String result, String type, long durationMs) {
-        if (registry == null) {
+        if (!hasRegistry()) {
             return;
         }
         counter(ReportMetricConstants.DELIVERY_RETRY_TOTAL, ReportMetricConstants.TagKeys.RESULT,
@@ -122,7 +122,7 @@ public class TemplateReportMeterBinder extends AbstractMeterBinder {
     }
 
     public void recordExport(String result, String format, long durationMs) {
-        if (registry == null) {
+        if (!hasRegistry()) {
             return;
         }
         counter(ReportMetricConstants.EXPORT_TOTAL, ReportMetricConstants.TagKeys.RESULT, result,
@@ -135,16 +135,11 @@ public class TemplateReportMeterBinder extends AbstractMeterBinder {
     // ---- internal helpers ----
 
     private Counter counter(String name, String... tags) {
-        return Counter.builder(name).tags(withModule(tags)).register(registry);
+        return Counter.builder(name).tags(commonTags().and(tags)).register(getRegistry());
     }
 
     private Timer timer(String name, String... tags) {
-        return Timer.builder(name).tags(withModule(tags)).register(registry);
-    }
-
-    private Tags withModule(String... tags) {
-        return Tags.of(ReportMetricConstants.TagKeys.MODULE, ReportMetricConstants.MODULE)
-                .and(tags);
+        return Timer.builder(name).tags(commonTags().and(tags)).register(getRegistry());
     }
 
     // ---- gauge value suppliers ----

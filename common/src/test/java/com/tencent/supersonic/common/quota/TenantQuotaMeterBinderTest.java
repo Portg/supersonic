@@ -9,6 +9,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class TenantQuotaMeterBinderTest {
 
+    private static final String MODULE_KEY = "module";
+    private static final String MODULE_VALUE = "tenant_quota";
+    private static final String ORIGIN_VALUE = "TenantQuotaMeterBinder";
+
     @Test
     void publishesAvailableAndWaitingGaugesPerTenant() {
         TenantQuotaConfig config = new TenantQuotaConfig();
@@ -22,10 +26,12 @@ class TenantQuotaMeterBinderTest {
         MeterRegistry registry = new SimpleMeterRegistry();
         new TenantQuotaMeterBinder(svc).bindTo(registry);
 
-        Double available = registry.find("s2_tenant_jdbc_permits_available").tag("tenantId", "55")
-                .gauge().value();
-        Double waiting = registry.find("s2_tenant_jdbc_permits_waiting").tag("tenantId", "55")
-                .gauge().value();
+        Double available =
+                registry.find("s2_tenant_jdbc_permits_available").tag(MODULE_KEY, MODULE_VALUE)
+                        .tag("origin", ORIGIN_VALUE).tag("tenantId", "55").gauge().value();
+        Double waiting =
+                registry.find("s2_tenant_jdbc_permits_waiting").tag(MODULE_KEY, MODULE_VALUE)
+                        .tag("origin", ORIGIN_VALUE).tag("tenantId", "55").gauge().value();
 
         assertNotNull(available);
         assertNotNull(waiting);
@@ -45,10 +51,12 @@ class TenantQuotaMeterBinderTest {
         new TenantQuotaMeterBinder(svc).bindTo(registry);
 
         svc.acquireJdbc(77L, 100).close();
-        registry.find("s2_tenant_quota_known_tenants").gauge().value();
+        registry.find("s2_tenant_quota_known_tenants").tag(MODULE_KEY, MODULE_VALUE)
+                .tag("origin", ORIGIN_VALUE).gauge().value();
 
-        Double available = registry.find("s2_tenant_jdbc_permits_available").tag("tenantId", "77")
-                .gauge().value();
+        Double available =
+                registry.find("s2_tenant_jdbc_permits_available").tag(MODULE_KEY, MODULE_VALUE)
+                        .tag("origin", ORIGIN_VALUE).tag("tenantId", "77").gauge().value();
 
         assertNotNull(available);
         assertEquals(2.0, available);

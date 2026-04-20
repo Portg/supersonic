@@ -12,8 +12,6 @@ import io.micrometer.core.instrument.Timer;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
-import java.util.concurrent.TimeUnit;
-
 /**
  * Unified MeterBinder for the Feishu module.
  *
@@ -27,7 +25,6 @@ import java.util.concurrent.TimeUnit;
 public class FeishuMeterBinder extends AbstractMeterBinder {
 
     private final FeishuUserMappingMapper userMappingMapper;
-    private volatile MeterRegistry registry;
     private Counter rateLimitCounter;
     private Counter rejectionCounter;
 
@@ -38,7 +35,6 @@ public class FeishuMeterBinder extends AbstractMeterBinder {
 
     @Override
     protected void doBindTo(MeterRegistry registry) {
-        this.registry = registry;
         rateLimitCounter =
                 Counter.builder("feishu.rate_limit.hits").tags(commonTags()).register(registry);
         rejectionCounter =
@@ -64,27 +60,27 @@ public class FeishuMeterBinder extends AbstractMeterBinder {
     // ---- timer / counter helpers (called by FeishuMetricsAspect) ----
 
     public Timer.Sample startSample() {
-        return registry != null ? Timer.start(registry) : null;
+        return hasRegistry() ? Timer.start(getRegistry()) : null;
     }
 
     public void stopQueryTimer(Timer.Sample sample, String handler, String status) {
-        if (sample != null && registry != null) {
+        if (sample != null && hasRegistry()) {
             sample.stop(Timer.builder("feishu.query.duration").tags(commonTags())
-                    .tag("handler", handler).tag("status", status).register(registry));
+                    .tag("handler", handler).tag("status", status).register(getRegistry()));
         }
     }
 
     public void incrementMessageSent(String type) {
-        if (registry != null) {
+        if (hasRegistry()) {
             Counter.builder("feishu.message.sent").tags(commonTags()).tag("type", type)
-                    .register(registry).increment();
+                    .register(getRegistry()).increment();
         }
     }
 
     public void incrementMessageSendError(String type) {
-        if (registry != null) {
+        if (hasRegistry()) {
             Counter.builder("feishu.message.send.errors").tags(commonTags()).tag("type", type)
-                    .register(registry).increment();
+                    .register(getRegistry()).increment();
         }
     }
 

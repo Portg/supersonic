@@ -19,11 +19,11 @@ public interface LlmUsageDOMapper extends BaseMapper<LlmUsageDO> {
     long sumTokens(@Param("tenantId") Long tenantId, @Param("start") Timestamp start,
             @Param("endExclusive") Timestamp endExclusive);
 
-    @Select("SELECT DATE(created_at) AS day, SUM(total_tokens) AS tokens, "
+    @Select("SELECT CAST(created_at AS DATE) AS day, SUM(total_tokens) AS tokens, "
             + "SUM(estimated_cost_micros) AS cost "
             + "FROM s2_llm_usage WHERE tenant_id = #{tenantId} "
             + "AND created_at >= #{start} AND created_at < #{endExclusive} "
-            + "GROUP BY DATE(created_at) ORDER BY day")
+            + "GROUP BY CAST(created_at AS DATE) ORDER BY day")
     List<Map<String, Object>> dailyAggregates(@Param("tenantId") Long tenantId,
             @Param("start") Timestamp start, @Param("endExclusive") Timestamp endExclusive);
 }

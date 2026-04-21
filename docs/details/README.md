@@ -19,6 +19,7 @@
 | [03-monitoring-alerts.md](platform/03-monitoring-alerts.md) | Prometheus 指标、Grafana 仪表盘、SLO 告警规则（5 条 P0）、Alertmanager 路由 | 已上线（部分指标待补全）|
 | [04-module-boundaries.md](platform/04-module-boundaries.md) | ArchUnit 模块边界强制 | 已上线 |
 | [cache-abstraction.md](platform/cache-abstraction.md) | Unified cache SPI (Caffeine/Redis) with per-namespace config | 已上线 |
+| [outbox.md](platform/outbox.md) | 事务性 Outbox 模式：at-least-once 跨模块事件投递（`s2_outbox` + relay + dead-letter） | 已上线 |
 
 参考文档：
 - [platform-tenant-rbac-migration.md](../platform-tenant-rbac-migration.md) — RBAC 拆分迁移变更记录（前后端文件清单、API 清单、Bug 修复）

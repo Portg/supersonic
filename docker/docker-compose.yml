@@ -80,7 +80,11 @@ services:
     privileged: true
     container_name: supersonic_standalone
     environment:
+      # Profile axes (see docs/runbook/spring-profiles.md):
+      #   S2_DB_TYPE → spring.profiles.active (h2 | mysql | postgres)
+      #   S2_ENV     → spring.profiles.include (dev | prd)
       S2_DB_TYPE: postgres
+      S2_ENV: prd
       S2_DB_HOST: supersonic_postgres
       S2_DB_PORT: 5432
       S2_DB_DATABASE: postgres

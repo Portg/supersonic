@@ -62,7 +62,8 @@ public class TenantSqlInterceptor implements Interceptor {
      */
     private static final Set<String> DEFAULT_EXCLUDED_TABLES =
             new HashSet<>(Arrays.asList("s2_tenant", "s2_subscription_plan", "s2_permission",
-                    "s2_role_permission", "s2_user_role", "s2_role"));
+                    "s2_role_permission", "s2_user_role", "s2_role", "s2_outbox",
+                    "s2_outbox_dead"));
 
     private TenantConfig tenantConfig;
 

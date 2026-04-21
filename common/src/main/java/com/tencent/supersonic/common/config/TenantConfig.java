@@ -55,7 +55,10 @@ public class TenantConfig {
             // RBAC association tables without tenant_id
             "s2_permission", "s2_role_permission", "s2_user_role",
             // Feishu session table — tenant derived via feishu_open_id → s2_feishu_user_mapping
-            "s2_feishu_query_session");
+            "s2_feishu_query_session",
+            // Outbox tables — relay runs cross-tenant (scheduled), rows carry tenant_id for audit
+            // only
+            "s2_outbox", "s2_outbox_dead");
 
     /**
      * URL patterns that should be excluded from tenant validation. These are endpoints that either

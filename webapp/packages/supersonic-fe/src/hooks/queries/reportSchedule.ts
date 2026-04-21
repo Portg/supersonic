@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { queryKeys } from '@/utils/queryKeys';
+import { createQueryKeys, getCurrentTenantId, queryKeys } from '@/utils/queryKeys';
 import {
   getScheduleList,
   getValidDataSetList,
@@ -18,6 +18,10 @@ export interface ScheduleListParams {
   pageSize: number;
   datasetId?: number;
   enabled?: boolean;
+}
+
+function currentTenantQueryKeys() {
+  return createQueryKeys(getCurrentTenantId(1));
 }
 
 export function useScheduleListQuery(params: ScheduleListParams) {
@@ -60,9 +64,13 @@ export function useScheduleSaveMutation() {
   return useMutation({
     mutationFn: (v: { id?: number; values: Partial<ReportSchedule> }) =>
       v.id ? updateSchedule(v.id, v.values) : createSchedule(v.values),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.reportSchedule.all() });
-      qc.invalidateQueries({ queryKey: queryKeys.deliveryConfig.all() });
+    onMutate: () => ({ keys: currentTenantQueryKeys() }),
+    onSuccess: (_data, _vars, ctx) => {
+      // ctx is always defined here: onMutate always returns {keys}, and onSuccess
+      // is never called when onMutate throws.
+      const keys = ctx!.keys;
+      qc.invalidateQueries({ queryKey: keys.reportSchedule.all() });
+      qc.invalidateQueries({ queryKey: keys.deliveryConfig.all() });
     },
   });
 }
@@ -72,27 +80,31 @@ export function useScheduleDeleteMutation() {
   return useMutation({
     mutationFn: (id: number) => deleteSchedule(id),
     onMutate: async (id) => {
-      await qc.cancelQueries({ queryKey: queryKeys.reportSchedule.all() });
+      const keys = currentTenantQueryKeys();
+      await qc.cancelQueries({ queryKey: keys.reportSchedule.all() });
       const snapshots = qc.getQueriesData<{ records: ReportSchedule[]; total: number }>({
-        queryKey: queryKeys.reportSchedule.all(),
+        queryKey: keys.reportSchedule.all(),
       });
       snapshots.forEach(([key, data]) => {
         if (!data) return;
+        const nextRecords = data.records.filter((r) => r.id !== id);
+        if (nextRecords.length === data.records.length) return;
         qc.setQueryData(key, {
           ...data,
-          records: data.records.filter((r) => r.id !== id),
+          records: nextRecords,
           total: Math.max(0, (data.total ?? 0) - 1),
         });
       });
-      return { snapshots };
+      return { keys, snapshots };
     },
     onError: (_err, _id, ctx) => {
       ctx?.snapshots.forEach(([key, data]) => {
         qc.setQueryData<{ records: ReportSchedule[]; total: number }>(key, data);
       });
     },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.reportSchedule.all() });
+    onSettled: (_data, _err, _id, ctx) => {
+      const keys = ctx?.keys ?? currentTenantQueryKeys();
+      qc.invalidateQueries({ queryKey: keys.reportSchedule.all() });
     },
   });
 }
@@ -102,7 +114,12 @@ export function useScheduleToggleMutation() {
   return useMutation({
     mutationFn: (v: { id: number; enabled: boolean }) =>
       v.enabled ? resumeSchedule(v.id) : pauseSchedule(v.id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.reportSchedule.all() }),
+    onMutate: () => ({ keys: currentTenantQueryKeys() }),
+    onSuccess: (_data, _vars, ctx) => {
+      // ctx is always defined here: same invariant as useScheduleSaveMutation.
+      const keys = ctx!.keys;
+      qc.invalidateQueries({ queryKey: keys.reportSchedule.all() });
+    },
   });
 }
 

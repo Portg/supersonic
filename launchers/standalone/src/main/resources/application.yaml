@@ -8,6 +8,9 @@ server:
 
 spring:
   profiles:
+    # active = DB dialect (h2 | mysql | postgres); include = env (dev | prd).
+    # These two axes are independent — DO NOT couple them via spring.profiles.group.
+    # See docs/runbook/spring-profiles.md for activation matrix.
     active: ${S2_DB_TYPE:h2}
     include: ${S2_ENV:dev}
   application:

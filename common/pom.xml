@@ -298,6 +298,18 @@
             <version>2.28.29</version>
             <optional>true</optional>
         </dependency>
+
+        <!-- Outbox integration tests: embedded DB + async assertion -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
 </project>

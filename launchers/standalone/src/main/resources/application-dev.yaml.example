@@ -5,6 +5,11 @@
 #
 # 激活方式：application.yaml 中 spring.profiles.include 默认含 dev（S2_ENV:dev）。
 # 密钥请用环境变量或在 application-dev.yaml 内填写本地值（勿提交该文件）。
+#
+# Allowed key prefixes in this file (enforced by ProfileYamlDiffTest):
+#   - s2.encryption.*
+#   - s2.feishu.app-id / app-secret / verification-token / encrypt-key
+#   - spring.mail.*
 
 s2:
   encryption:
@@ -15,3 +20,19 @@ s2:
     app-secret: ${FEISHU_APP_SECRET:}
     verification-token: ${FEISHU_VERIFICATION_TOKEN:}
     encrypt-key: ${FEISHU_ENCRYPT_KEY:}
+
+# Optional: override mail defaults for local SMTP testing.
+# Base application.yaml already reads ${EMAIL_HOST}, ${EMAIL_PORT}, etc. from env vars.
+# Uncomment below only if you want hard-coded local defaults.
+#spring:
+#  mail:
+#    host: ${EMAIL_HOST:smtp.example.com}
+#    port: ${EMAIL_PORT:465}
+#    username: ${EMAIL_USERNAME:}
+#    password: ${EMAIL_PASSWORD:}
+#    protocol: smtps
+#    properties:
+#      mail.smtp.auth: true
+#      mail.smtp.ssl.enable: true
+#      mail.smtp.timeout: 10000
+#      mail.smtp.connectiontimeout: 10000

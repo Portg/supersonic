@@ -12,23 +12,9 @@ function compileMenuFilter() {
   fs.rmSync(outDir, { recursive: true, force: true });
   execFileSync(process.execPath, [
     tscBin,
-    path.join(projectRoot, 'src/utils/menuFilter.ts'),
-    path.join(projectRoot, 'src/pages/RouteGroupRedirect/resolveRedirect.ts'),
-    path.join(projectRoot, 'src/pages/ReportSchedule/utils/scheduleFormValidation.ts'),
-    path.join(projectRoot, 'src/utils/queryUtils.ts'),
-    '--module',
-    'commonjs',
-    '--target',
-    'es2019',
-    '--rootDir',
-    path.join(projectRoot, 'src'),
-    '--outDir',
-    outDir,
-    '--esModuleInterop',
-    '--skipLibCheck',
-  ], {
-    stdio: 'inherit',
-  });
+    '-p',
+    path.join(projectRoot, 'tsconfig.unit.json'),
+  ], { stdio: 'inherit' });
 }
 
 function runMenuFilterTests() {

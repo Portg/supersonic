@@ -47,7 +47,7 @@ class ProfileYamlDiffTest {
                     "s2.embedding.store.",
                     // Postgres-specific Quartz: PostgreSQLDelegate + selectWithLockSQL.
                     "spring.quartz.properties."),
-            "application-dev.yaml",
+            "application-dev.yaml.example",
             List.of("s2.encryption.", "s2.feishu.app-id", "s2.feishu.app-secret",
                     "s2.feishu.verification-token", "s2.feishu.encrypt-key", "spring.mail."),
             "application-prd.yaml",

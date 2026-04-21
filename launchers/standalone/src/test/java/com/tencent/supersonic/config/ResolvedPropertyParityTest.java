@@ -51,13 +51,15 @@ class ResolvedPropertyParityTest {
 
     @Test
     void h2Dev_flywayDisabled() throws IOException {
-        var src = mergedSources("application.yaml", "application-h2.yaml", "application-dev.yaml");
+        var src = mergedSources("application.yaml", "application-h2.yaml",
+                "application-dev.yaml.example");
         assertEquals("false", String.valueOf(get(src, "spring.flyway.enabled")));
     }
 
     @Test
     void h2Dev_baseFlywayKeysInherited() throws IOException {
-        var src = mergedSources("application.yaml", "application-h2.yaml", "application-dev.yaml");
+        var src = mergedSources("application.yaml", "application-h2.yaml",
+                "application-dev.yaml.example");
         assertEquals("true", String.valueOf(get(src, "spring.flyway.baseline-on-migrate")));
         assertEquals("flyway_schema_history", get(src, "spring.flyway.table"));
         assertEquals("false", String.valueOf(get(src, "spring.flyway.out-of-order")));
@@ -65,11 +67,23 @@ class ResolvedPropertyParityTest {
 
     @Test
     void h2Dev_h2DatasourceDriver() throws IOException {
-        var src = mergedSources("application.yaml", "application-h2.yaml", "application-dev.yaml");
+        var src = mergedSources("application.yaml", "application-h2.yaml",
+                "application-dev.yaml.example");
         assertEquals("org.h2.Driver", get(src, "spring.datasource.driver-class-name"));
         String url = String.valueOf(get(src, "spring.datasource.url"));
         assertTrue(url.startsWith("jdbc:h2:mem:semantic"),
                 "Expected H2 in-memory URL, got: " + url);
+    }
+
+    @Test
+    void h2Dev_quartzOverridesApplied() throws IOException {
+        var src = mergedSources("application.yaml", "application-h2.yaml",
+                "application-dev.yaml.example");
+        assertEquals("false", String
+                .valueOf(get(src, "spring.quartz.properties.org.quartz.jobStore.isClustered")));
+        assertEquals("org.quartz.impl.jdbcjobstore.StdJDBCDelegate",
+                get(src, "spring.quartz.properties.org.quartz.jobStore.driverDelegateClass"));
+        assertEquals("QRTZ_", get(src, "spring.quartz.properties.org.quartz.jobStore.tablePrefix"));
     }
 
     // ── MySQL + prd ─────────────────────────────────────────────────────────
@@ -113,6 +127,19 @@ class ResolvedPropertyParityTest {
         assertEquals("X-Tenant-Id", get(src, "s2.tenant.tenant-id-header"));
     }
 
+    @Test
+    void mysqlPrd_quartzOverridesApplied() throws IOException {
+        var src =
+                mergedSources("application.yaml", "application-mysql.yaml", "application-prd.yaml");
+        assertEquals("true", String
+                .valueOf(get(src, "spring.quartz.properties.org.quartz.jobStore.isClustered")));
+        assertEquals("org.quartz.impl.jdbcjobstore.StdJDBCDelegate",
+                get(src, "spring.quartz.properties.org.quartz.jobStore.driverDelegateClass"));
+        assertEquals("QRTZ_", get(src, "spring.quartz.properties.org.quartz.jobStore.tablePrefix"));
+        assertEquals("SELECT * FROM {0}LOCKS WHERE SCHED_NAME = {1} AND LOCK_NAME = ? FOR UPDATE",
+                get(src, "spring.quartz.properties.org.quartz.jobStore.selectWithLockSQL"));
+    }
+
     // ── Postgres + prd ──────────────────────────────────────────────────────
 
     @Test
@@ -148,6 +175,19 @@ class ResolvedPropertyParityTest {
         String url = String.valueOf(get(src, "spring.datasource.url"));
         assertTrue(url.startsWith("jdbc:postgresql://"),
                 "Expected PostgreSQL JDBC URL, got: " + url);
+    }
+
+    @Test
+    void postgresPrd_quartzOverridesApplied() throws IOException {
+        var src = mergedSources("application.yaml", "application-postgres.yaml",
+                "application-prd.yaml");
+        assertEquals("true", String
+                .valueOf(get(src, "spring.quartz.properties.org.quartz.jobStore.isClustered")));
+        assertEquals("org.quartz.impl.jdbcjobstore.PostgreSQLDelegate",
+                get(src, "spring.quartz.properties.org.quartz.jobStore.driverDelegateClass"));
+        assertEquals("QRTZ_", get(src, "spring.quartz.properties.org.quartz.jobStore.tablePrefix"));
+        assertEquals("SELECT * FROM {0}LOCKS WHERE SCHED_NAME = {1} AND LOCK_NAME = ? FOR UPDATE",
+                get(src, "spring.quartz.properties.org.quartz.jobStore.selectWithLockSQL"));
     }
 
     // ── Cross-profile: shared keys must NOT be overridden by mysql/postgres ─

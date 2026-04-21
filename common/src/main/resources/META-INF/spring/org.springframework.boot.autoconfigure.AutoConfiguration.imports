@@ -1,3 +1,4 @@
 com.tencent.supersonic.common.storage.FileStorageAutoConfiguration
 com.tencent.supersonic.common.cache.UnifiedCacheAutoConfiguration
 com.tencent.supersonic.common.quota.TenantQuotaAutoConfiguration
+com.tencent.supersonic.common.outbox.OutboxAutoConfiguration

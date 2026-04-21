@@ -31,11 +31,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.Date;
 import java.util.List;
@@ -58,22 +59,22 @@ public class SemanticTemplateServiceImpl extends
 
     private final SemanticDeploymentMapper deploymentMapper;
     private final SemanticDeployExecutor deployExecutor;
-    private final ApplicationEventPublisher applicationEventPublisher;
     private final OutboxPublisher outboxPublisher;
     private final TenantConfig tenantConfig;
+    private final TransactionTemplate transactionTemplate;
     private final ThreadPoolExecutor deployPool;
     private final DomainService domainService;
     private final ReportScheduleService reportScheduleService;
 
     public SemanticTemplateServiceImpl(SemanticDeploymentMapper deploymentMapper,
-            @Lazy SemanticDeployExecutor deployExecutor,
-            ApplicationEventPublisher applicationEventPublisher, OutboxPublisher outboxPublisher,
-            TenantConfig tenantConfig, @Qualifier("deployExecutor") ThreadPoolExecutor deployPool,
-            DomainService domainService, @Lazy ReportScheduleService reportScheduleService) {
+            @Lazy SemanticDeployExecutor deployExecutor, OutboxPublisher outboxPublisher,
+            PlatformTransactionManager transactionManager, TenantConfig tenantConfig,
+            @Qualifier("deployExecutor") ThreadPoolExecutor deployPool, DomainService domainService,
+            @Lazy ReportScheduleService reportScheduleService) {
         this.deploymentMapper = deploymentMapper;
         this.deployExecutor = deployExecutor;
-        this.applicationEventPublisher = applicationEventPublisher;
         this.outboxPublisher = outboxPublisher;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
         this.tenantConfig = tenantConfig;
         this.deployPool = deployPool;
         this.domainService = domainService;
@@ -267,22 +268,8 @@ public class SemanticTemplateServiceImpl extends
                 SemanticDeployResult result = deployExecutor.execute(template, param, user,
                         step -> updateDeploymentStep(deployment, step));
 
-                outboxPublisher.publish(new TemplateDeployedEvent(this, result,
-                        template.getTemplateConfig(), user));
-
-                deployment.setResultDetail(result);
-                deployment.setStatus(SemanticDeployment.DeploymentStatus.SUCCESS);
-                deployment.setEndTime(new Date());
-
-                SemanticTemplateDO templateDO = baseMapper.selectById(template.getId());
-                if (templateDO != null && templateDO.getIsBuiltin() == 0) {
-                    templateDO.setStatus(STATUS_DEPLOYED);
-                    templateDO.setUpdatedAt(new Date());
-                    templateDO.setUpdatedBy(user.getName());
-                    baseMapper.updateById(templateDO);
-                    log.info("Template {} status updated to DEPLOYED after successful deployment",
-                            template.getId());
-                }
+                finalizeSuccessfulDeployment(deployment, template.getId(), result,
+                        template.getTemplateConfig(), user);
             } catch (Exception e) {
                 // Re-read status in case cancelDeployment() already set it to CANCELLED
                 SemanticDeploymentDO latestDO = deploymentMapper.selectById(deploymentId);
@@ -297,7 +284,9 @@ public class SemanticTemplateServiceImpl extends
                 deployment.setEndTime(new Date());
             }
 
-            updateDeploymentStatus(deployment);
+            if (deployment.getStatus() != SemanticDeployment.DeploymentStatus.SUCCESS) {
+                updateDeploymentStatus(deployment);
+            }
         } finally {
             TenantContext.clear();
         }
@@ -343,12 +332,30 @@ public class SemanticTemplateServiceImpl extends
             SemanticDeployResult result = deployExecutor.execute(template, param, user,
                     step -> updateDeploymentStep(deployment, step));
 
-            outboxPublisher.publish(
-                    new TemplateDeployedEvent(this, result, template.getTemplateConfig(), user));
+            finalizeSuccessfulDeployment(deployment, templateId, result,
+                    template.getTemplateConfig(), user);
+        } catch (Exception e) {
+            log.error("Failed to deploy template: {}", templateId, e);
+            deployment.setStatus(SemanticDeployment.DeploymentStatus.FAILED);
+            deployment.setErrorMessage(e.getMessage());
+            deployment.setEndTime(new Date());
+        }
+
+        if (deployment.getStatus() != SemanticDeployment.DeploymentStatus.SUCCESS) {
+            updateDeploymentStatus(deployment);
+        }
+        return deployment;
+    }
+
+    private void finalizeSuccessfulDeployment(SemanticDeployment deployment, Long templateId,
+            SemanticDeployResult result, SemanticTemplateConfig templateConfig, User user) {
+        transactionTemplate.executeWithoutResult(status -> {
+            outboxPublisher.publish(new TemplateDeployedEvent(this, result, templateConfig, user));
 
             deployment.setResultDetail(result);
             deployment.setStatus(SemanticDeployment.DeploymentStatus.SUCCESS);
             deployment.setEndTime(new Date());
+            updateDeploymentStatus(deployment);
 
             SemanticTemplateDO templateDO = baseMapper.selectById(templateId);
             if (templateDO != null && templateDO.getIsBuiltin() == 0) {
@@ -359,15 +366,7 @@ public class SemanticTemplateServiceImpl extends
                 log.info("Template {} status updated to DEPLOYED after successful deployment",
                         templateId);
             }
-        } catch (Exception e) {
-            log.error("Failed to deploy template: {}", templateId, e);
-            deployment.setStatus(SemanticDeployment.DeploymentStatus.FAILED);
-            deployment.setErrorMessage(e.getMessage());
-            deployment.setEndTime(new Date());
-        }
-
-        updateDeploymentStatus(deployment);
-        return deployment;
+        });
     }
 
     private void updateDeploymentStatus(SemanticDeployment deployment) {

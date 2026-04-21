@@ -7,8 +7,9 @@ import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
@@ -33,31 +34,42 @@ public class OutboxRelay {
     private final ApplicationEventPublisher springPublisher;
     private final OutboxProperties props;
     private final ObjectMapper mapper;
+    private final TransactionTemplate transactionTemplate;
     private final String nodeId;
 
     public OutboxRelay(OutboxEventService service, OutboxDeadMapper deadMapper,
-            ApplicationEventPublisher springPublisher, OutboxProperties props,
-            ObjectMapper mapper) {
+            ApplicationEventPublisher springPublisher, OutboxProperties props, ObjectMapper mapper,
+            PlatformTransactionManager transactionManager) {
         this.service = service;
         this.deadMapper = deadMapper;
         this.springPublisher = springPublisher;
         this.props = props;
         this.mapper = mapper;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
+        this.transactionTemplate
+                .setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         this.nodeId = computeNodeId();
     }
 
     @Scheduled(fixedDelayString = "${s2.outbox.poll-interval-ms:2000}")
     public void poll() {
         try {
-            pollOnce();
+            doPollOnceInTransaction();
         } catch (Exception e) {
             log.warn("Outbox poll failed: {}", e.getMessage(), e);
         }
     }
 
     /** Visible for testing — drives one claim+dispatch cycle in the calling thread. */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void pollOnce() {
+        doPollOnceInTransaction();
+    }
+
+    private void doPollOnceInTransaction() {
+        transactionTemplate.executeWithoutResult(status -> pollBatch());
+    }
+
+    private void pollBatch() {
         OutboxMapper m = service.getBaseMapper();
         List<OutboxEvent> batch = m.lockUnprocessed(props.getBatchSize());
         if (batch.isEmpty()) {

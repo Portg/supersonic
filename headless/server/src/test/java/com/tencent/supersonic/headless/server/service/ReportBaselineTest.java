@@ -181,7 +181,8 @@ class ReportBaselineTest {
     // Test 3: Scheduler concurrency limit (AG-14)
     // AG-14: ReportScheduleDispatcher uses a ConcurrentHashMap<Long, Semaphore>
     // keyed by tenantId to cap concurrent executions at maxConcurrentPerTenant
-    // (default 5, configurable via s2.report.schedule.max-concurrent-per-tenant).
+    // (default 5, configurable via s2.report.max-concurrent-per-tenant and compatible with
+    // legacy s2.report.schedule.max-concurrent-per-tenant).
     // Tasks that cannot acquire the semaphore are skipped (not queued) and will
     // retry on the next cron trigger. This test validates the gate mechanism
     // directly using the same tryAcquire/release pattern implemented in the

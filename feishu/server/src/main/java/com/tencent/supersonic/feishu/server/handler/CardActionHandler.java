@@ -147,9 +147,9 @@ public class CardActionHandler {
             return;
         }
 
-        // ReportScheduleService.getScheduleById 已经内置 checkReadPermission(schedule, user)，
-        // 非 owner 且非 super admin 会抛 InvalidPermissionException —— 捕获后给操作者发一张拒绝卡片。
         try {
+            // ReportScheduleService.getScheduleById 已经内置 checkReadPermission(schedule, user)，
+            // 非 owner 且非 super admin 会抛 InvalidPermissionException —— 捕获后给操作者发一张拒绝卡片。
             ReportScheduleResp schedule = reportScheduleService.getScheduleById(scheduleId, user);
             if (schedule == null) {
                 card.put("header", FeishuCardTemplate.buildHeader("调度已删除", "orange"));
@@ -173,6 +173,15 @@ public class CardActionHandler {
             card.put("header", FeishuCardTemplate.buildHeader("无权限下载", "red"));
             card.put("elements",
                     List.of(FeishuCardTemplate.buildMarkdown("你没有该报表的查看权限，请联系报表创建人开通权限。")));
+            sendCardSafely(operatorOpenId, card);
+            return;
+        } catch (Exception e) {
+            log.error(
+                    "[feishu] failed to prepare report download for openId={} user={} schedule={} execution={}",
+                    operatorOpenId, user.getId(), scheduleId, executionId, e);
+            card.put("header", FeishuCardTemplate.buildHeader("暂不能下载", "orange"));
+            card.put("elements",
+                    List.of(FeishuCardTemplate.buildMarkdown("下载入口生成失败，请稍后重试；若仍失败请联系管理员排查。")));
             sendCardSafely(operatorOpenId, card);
             return;
         }

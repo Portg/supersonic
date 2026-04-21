@@ -114,9 +114,9 @@ management:
         s2.nl2sql.llm.duration: true
         s2.nl2sql.db.duration: true
       slo:
-        s2.nl2sql.stage.duration: 0.1s,0.5s,1s,2s,5s,10s,15s,30s
-        s2.nl2sql.llm.duration: 0.5s,1s,2s,5s,10s,15s,30s
-        s2.nl2sql.db.duration: 0.1s,0.5s,1s,5s,10s,30s
+        s2.nl2sql.stage.duration: 100ms,500ms,1s,2s,5s,10s,15s,30s
+        s2.nl2sql.llm.duration: 500ms,1s,2s,5s,10s,15s,30s
+        s2.nl2sql.db.duration: 100ms,500ms,1s,5s,10s,30s
 
 logging:
   level:
@@ -296,7 +296,7 @@ s2:
       max-rows: ${FEISHU_EXPORT_MAX_ROWS:100000}
     # cache.type moved to s2.cache.namespaces.feishu-*.type (use FEISHU_CACHE_TYPE env var)
   report-download:
-    signing-secret: ${REPORT_DOWNLOAD_SIGNING_SECRET:${S2_ENCRYPTION_KEY:}}
+    signing-secret: ${REPORT_DOWNLOAD_SIGNING_SECRET:${s2.encryption.aes-key:}}
     token-ttl-seconds: ${REPORT_DOWNLOAD_TOKEN_TTL_SECONDS:604800}
   # Export configuration
   export:
@@ -326,7 +326,7 @@ s2:
       path-style: ${S2_STORAGE_S3_PATH_STYLE:false}
   # Report execution configuration
   report:
-    max-concurrent-per-tenant: 3
+    max-concurrent-per-tenant: 5
   # SLO thresholds for template-report observability and alerts
   slo:
     report:

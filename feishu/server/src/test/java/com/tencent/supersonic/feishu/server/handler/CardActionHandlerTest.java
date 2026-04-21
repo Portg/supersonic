@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -167,6 +168,25 @@ class CardActionHandlerTest {
         Map<String, Object> header = (Map<String, Object>) cardCaptor.getValue().get("header");
         Map<String, Object> title = (Map<String, Object>) header.get("title");
         assertEquals("下载地址无效", title.get("content"));
+        assertFalse(cardCaptor.getValue().toString().contains("token="));
+    }
+
+    @Test
+    void reportDownloadShouldReplyGracefullyWhenScheduleLookupFailsUnexpectedly() {
+        Map<String, Object> actionValue = new HashMap<>();
+        actionValue.put("action", "report_download");
+        actionValue.put("scheduleId", 8L);
+        actionValue.put("executionId", 9L);
+        doThrow(new RuntimeException("boom")).when(reportScheduleService).getScheduleById(8L,
+                owner);
+
+        handler.handle(actionValue, owner, "ou_alice");
+
+        ArgumentCaptor<Map<String, Object>> cardCaptor = ArgumentCaptor.forClass(Map.class);
+        verify(messageSender).sendCard(anyString(), cardCaptor.capture());
+        Map<String, Object> header = (Map<String, Object>) cardCaptor.getValue().get("header");
+        Map<String, Object> title = (Map<String, Object>) header.get("title");
+        assertEquals("暂不能下载", title.get("content"));
         assertFalse(cardCaptor.getValue().toString().contains("token="));
     }
 

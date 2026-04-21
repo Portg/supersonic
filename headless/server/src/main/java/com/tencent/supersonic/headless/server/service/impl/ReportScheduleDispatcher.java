@@ -28,7 +28,7 @@ public class ReportScheduleDispatcher {
     @Autowired(required = false)
     private TemplateReportMeterBinder reportMetrics;
 
-    @Value("${s2.report.schedule.max-concurrent-per-tenant:5}")
+    @Value("${s2.report.max-concurrent-per-tenant:${s2.report.schedule.max-concurrent-per-tenant:5}}")
     private int maxConcurrentPerTenant;
 
     public void dispatch(Long scheduleId) {

@@ -237,9 +237,12 @@ public class DefaultUserAdaptor implements UserAdaptor {
             String token = tokenService.generateToken(UserWithPassword.convert(user), appKey);
             updateLastLogin(userReq.getName());
             return token;
+        } catch (RuntimeException e) {
+            log.error("Login error", e);
+            throw e;
         } catch (Exception e) {
             log.error("Login error", e);
-            throw new RuntimeException("password encrypt error, please try again");
+            throw new RuntimeException("password encrypt error, please try again", e);
         }
     }
 
@@ -310,19 +313,19 @@ public class DefaultUserAdaptor implements UserAdaptor {
         if (userDO == null) {
             throw new RuntimeException("user not exist,please register");
         }
+        String password;
         try {
-            String password = AESEncryptionUtil.encrypt(userReq.getPassword(),
+            password = AESEncryptionUtil.encrypt(userReq.getPassword(),
                     AESEncryptionUtil.getBytesFromString(userDO.getSalt()));
-            if (userDO.getPassword().equals(password)) {
-                return UserWithPassword.get(userDO.getId(), userDO.getName(),
-                        userDO.getDisplayName(), userDO.getEmail(), userDO.getPassword(),
-                        userDO.getIsAdmin(), userDO.getTenantId(), null);
-            } else {
-                throw new RuntimeException("password not correct, please try again");
-            }
         } catch (Exception e) {
-            throw new RuntimeException("password encrypt error, please try again");
+            throw new RuntimeException("password encrypt error, please try again", e);
         }
+        if (userDO.getPassword().equals(password)) {
+            return UserWithPassword.get(userDO.getId(), userDO.getName(), userDO.getDisplayName(),
+                    userDO.getEmail(), userDO.getPassword(), userDO.getIsAdmin(),
+                    userDO.getTenantId(), null);
+        }
+        throw new RuntimeException("password not correct, please try again");
     }
 
     @Override

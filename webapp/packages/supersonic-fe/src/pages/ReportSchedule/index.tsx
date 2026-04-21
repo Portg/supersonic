@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import dayjs from 'dayjs';
 import { Button, Table, Tag, Switch, Space, Popconfirm, message, Tooltip } from 'antd';
 import { PlusOutlined, SendOutlined, SettingOutlined } from '@ant-design/icons';
@@ -7,83 +7,41 @@ import ScheduleForm from './components/ScheduleForm';
 import ExecutionList from './components/ExecutionList';
 import styles from './index.less';
 import taskStyles from '../TaskCenter/style.less';
-import {
-  getScheduleList,
-  createSchedule,
-  updateSchedule,
-  deleteSchedule,
-  pauseSchedule,
-  resumeSchedule,
-  triggerSchedule,
-  getValidDataSetList,
-} from '@/services/reportSchedule';
 import type { ReportSchedule } from '@/services/reportSchedule';
-import { getConfigList, DeliveryConfig, DELIVERY_TYPE_MAP } from '@/services/deliveryConfig';
+import { DELIVERY_TYPE_MAP } from '@/services/deliveryConfig';
 import { MSG } from '@/common/messages';
 import PageEmpty from '@/components/PageEmpty';
+import {
+  useScheduleListQuery,
+  useValidDataSetMapQuery,
+  useDeliveryConfigMapQuery,
+  useScheduleSaveMutation,
+  useScheduleDeleteMutation,
+  useScheduleToggleMutation,
+  useScheduleTriggerMutation,
+} from '@/hooks/queries/reportSchedule';
 
 const ReportSchedulePage: React.FC = () => {
-  const [data, setData] = useState<ReportSchedule[]>([]);
-  const [loading, setLoading] = useState(false);
-  const listLoadSucceededRef = useRef(false);
-  const [pagination, setPagination] = useState({ current: 1, pageSize: 20, total: 0 });
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
   const [formVisible, setFormVisible] = useState(false);
   const [editRecord, setEditRecord] = useState<ReportSchedule | undefined>();
   const [executionDrawer, setExecutionDrawer] = useState<{ visible: boolean; scheduleId?: number; name?: string }>({ visible: false });
-  const [deliveryConfigMap, setDeliveryConfigMap] = useState<Record<number, DeliveryConfig>>({});
-  const [datasetNameMap, setDatasetNameMap] = useState<Record<number, string>>({});
-  const triggeringScheduleIdsRef = useRef<Set<number>>(new Set());
   const [triggeringScheduleIds, setTriggeringScheduleIds] = useState<Record<number, boolean>>({});
 
-  const fetchData = async (current = 1, pageSize = 20) => {
-    setLoading(true);
-    try {
-      const res = await getScheduleList({ current, pageSize });
-      setData(res?.records || []);
-      setPagination({ current, pageSize, total: res?.total || 0 });
-      listLoadSucceededRef.current = true;
-    } catch (error) {
-      message.error('加载调度任务失败');
-      if (!listLoadSucceededRef.current) {
-        setData([]);
-        setPagination((p) => ({ ...p, current, pageSize, total: 0 }));
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  const listQuery = useScheduleListQuery(pagination);
+  const deliveryConfigMapQuery = useDeliveryConfigMapQuery();
+  const datasetNameMapQuery = useValidDataSetMapQuery();
 
-  const fetchDeliveryConfigs = async () => {
-    try {
-      const res = await getConfigList({ pageNum: 1, pageSize: 100 });
-      const configMap: Record<number, DeliveryConfig> = {};
-      (res.records || []).forEach((config: DeliveryConfig) => {
-        configMap[config.id] = config;
-      });
-      setDeliveryConfigMap(configMap);
-    } catch (error) {
-      console.error('Failed to load delivery configs', error);
-    }
-  };
+  const data = (listQuery.data?.records ?? []) as ReportSchedule[];
+  const total = listQuery.data?.total ?? 0;
+  const loading = listQuery.isLoading || listQuery.isFetching;
+  const deliveryConfigMap = deliveryConfigMapQuery.data ?? {};
+  const datasetNameMap = datasetNameMapQuery.data ?? {};
 
-  const fetchDatasetNames = async () => {
-    try {
-      const list = await getValidDataSetList();
-      const map: Record<number, string> = {};
-      (Array.isArray(list) ? list : []).forEach((d: { id: number; name: string }) => {
-        map[d.id] = d.name;
-      });
-      setDatasetNameMap(map);
-    } catch (error) {
-      console.error('Failed to load dataset names', error);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-    fetchDeliveryConfigs();
-    fetchDatasetNames();
-  }, []);
+  const saveMutation = useScheduleSaveMutation();
+  const deleteMutation = useScheduleDeleteMutation();
+  const toggleMutation = useScheduleToggleMutation();
+  const triggerMutation = useScheduleTriggerMutation();
 
   const handleCreate = () => {
     setEditRecord(undefined);
@@ -96,50 +54,28 @@ const ReportSchedulePage: React.FC = () => {
   };
 
   const handleFormSubmit = async (values: Partial<ReportSchedule>) => {
-    if (editRecord?.id) {
-      await updateSchedule(editRecord.id, values);
-      message.success(MSG.UPDATE_SUCCESS);
-    } else {
-      await createSchedule(values);
-      message.success(MSG.CREATE_SUCCESS);
-    }
+    await saveMutation.mutateAsync({ id: editRecord?.id, values });
+    message.success(editRecord?.id ? MSG.UPDATE_SUCCESS : MSG.CREATE_SUCCESS);
     setFormVisible(false);
-    fetchData(pagination.current, pagination.pageSize);
-    // Refresh delivery config map in case user added new configs
-    fetchDeliveryConfigs();
   };
 
   const handleDelete = async (id: number) => {
-    await deleteSchedule(id);
+    await deleteMutation.mutateAsync(id);
     message.success(MSG.DELETE_SUCCESS);
-    fetchData(pagination.current, pagination.pageSize);
   };
 
   const handleToggle = async (record: ReportSchedule, checked: boolean) => {
-    if (checked) {
-      await resumeSchedule(record.id);
-    } else {
-      await pauseSchedule(record.id);
-    }
-    fetchData(pagination.current, pagination.pageSize);
+    await toggleMutation.mutateAsync({ id: record.id, enabled: checked });
   };
 
   const handleTrigger = async (id: number) => {
-    if (triggeringScheduleIdsRef.current.has(id)) {
-      return;
-    }
-    triggeringScheduleIdsRef.current.add(id);
-    setTriggeringScheduleIds((prev) => ({ ...prev, [id]: true }));
+    if (triggeringScheduleIds[id]) return;
+    setTriggeringScheduleIds((p) => ({ ...p, [id]: true }));
     try {
-      await triggerSchedule(id);
+      await triggerMutation.mutateAsync(id);
       message.success('已触发执行');
     } finally {
-      triggeringScheduleIdsRef.current.delete(id);
-      setTriggeringScheduleIds((prev) => {
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
+      setTriggeringScheduleIds((p) => { const n = { ...p }; delete n[id]; return n; });
     }
   };
 
@@ -284,10 +220,12 @@ const ReportSchedulePage: React.FC = () => {
             ),
           }}
           pagination={{
-            ...pagination,
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            total,
             showSizeChanger: true,
-            showTotal: (total) => `共 ${total} 条`,
-            onChange: (page, size) => fetchData(page, size),
+            showTotal: (t) => `共 ${t} 条`,
+            onChange: (page, size) => setPagination({ current: page, pageSize: size }),
           }}
         />
       </div>

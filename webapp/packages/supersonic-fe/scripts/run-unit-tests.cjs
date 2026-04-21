@@ -15,6 +15,7 @@ function compileMenuFilter() {
     path.join(projectRoot, 'src/utils/menuFilter.ts'),
     path.join(projectRoot, 'src/pages/RouteGroupRedirect/resolveRedirect.ts'),
     path.join(projectRoot, 'src/pages/ReportSchedule/utils/scheduleFormValidation.ts'),
+    path.join(projectRoot, 'src/utils/queryUtils.ts'),
     '--module',
     'commonjs',
     '--target',

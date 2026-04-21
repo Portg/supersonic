@@ -4,10 +4,10 @@ import { useModel } from '@umijs/max';
 import HeaderDropdown from '../HeaderDropdown';
 import styles from './index.less';
 import TMEAvatar from '../TMEAvatar';
-import { AUTH_TOKEN_KEY } from '@/common/constants';
 import ChangePasswordModal, { IRef as IRefChangePasswordModal } from './ChangePasswordModal';
 import AccessTokensModal, { IRef as IAccessTokensModalRef } from './AccessTokensModal';
 import { history } from '@umijs/max';
+import { clearAuthState } from '@/services/request';
 
 export type GlobalHeaderRightProps = {
   menu?: boolean;
@@ -19,7 +19,7 @@ export type GlobalHeaderRightProps = {
  * 并返回到首页
  */
 const loginOut = async () => {
-  localStorage.removeItem(AUTH_TOKEN_KEY);
+  clearAuthState();
   history.push('/login');
   window.location.reload();
 };

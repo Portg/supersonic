@@ -20,10 +20,44 @@ import type {
 import { extend } from 'umi-request';
 import { history } from '@umijs/max';
 import queryString from 'query-string';
-import { AUTH_TOKEN_KEY } from '@/common/constants';
+import {
+  AUTH_TOKEN_KEY,
+  TENANT_ID_KEY,
+  REFRESH_TOKEN_KEY,
+  SESSION_ID_KEY,
+  USER_NAME_KEY,
+  ORGANIZATION_KEY,
+} from '@/common/constants';
 
 export const TOKEN_KEY = AUTH_TOKEN_KEY;
-export const TENANT_ID_KEY = 'X-Tenant-Id';
+export { TENANT_ID_KEY };
+
+export function clearAuthState() {
+  if (typeof localStorage === 'undefined') {
+    return;
+  }
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(TENANT_ID_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  localStorage.removeItem(SESSION_ID_KEY);
+  localStorage.removeItem(USER_NAME_KEY);
+  localStorage.removeItem(ORGANIZATION_KEY);
+}
+
+function redirectToLogin(reason = 'session_expired') {
+  // basePath is '/webapp/' per config/defaultSettings.ts — update here if it changes
+  // Already on the login page — do nothing to avoid an infinite reload loop
+  // (background requests like getOAuthProviders can return 403 on the login page itself)
+  if (window.location.pathname === '/webapp/login') {
+    return;
+  }
+  clearAuthState();
+  const loginUrl = new URL(`${window.location.origin}/webapp/login`);
+  if (reason) {
+    loginUrl.searchParams.set('error', reason);
+  }
+  window.location.replace(loginUrl.toString());
+}
 
 /** 与请求头注入的租户一致；缺省或非法时回退 defaultTenantId（默认 1）。 */
 export function getStoredTenantIdNumber(defaultTenantId = 1): number {
@@ -62,7 +96,7 @@ const authHeaderInterceptor = (url: string, options: RequestOptionsInit) => {
 const responseInterceptor = async (response: Response) => {
   const redirect = response.headers?.get?.('redirect'); // 若HEADER中含有REDIRECT说明后端想重定向
   if (redirect === 'REDIRECT') {
-    localStorage.removeItem(TOKEN_KEY);
+    clearAuthState();
     const win: any = window;
     // 将后端重定向的地址取出来,使用win.location.href去实现重定向的要求
     const contextpath = response.headers?.get?.('contextpath');
@@ -71,10 +105,12 @@ const responseInterceptor = async (response: Response) => {
     try {
       const data: Result<any> = await response?.clone()?.json?.();
       if (Number(data.code) === 403) {
-        history.push('/login');
+        redirectToLogin();
         return response;
       }
-    } catch (e) {}
+    } catch {
+      // non-JSON response — skip 403 redirect
+    }
   }
 
   return response;

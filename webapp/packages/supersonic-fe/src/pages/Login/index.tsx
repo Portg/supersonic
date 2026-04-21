@@ -48,7 +48,17 @@ const LoginPage: React.FC = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const error = urlParams.get('error');
     if (error) {
-      message.error(`Login failed: ${error}`);
+      const errorMessage =
+        error === 'session_expired'
+          ? '登录已过期，请重新登录'
+          : error === 'access_denied'
+            ? '登录失败：访问被拒绝'
+            : '登录失败，请重试';
+      message.error(errorMessage);
+      urlParams.delete('error');
+      const nextSearch = urlParams.toString();
+      const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${window.location.hash || ''}`;
+      window.history.replaceState({}, '', nextUrl);
     }
   }, []);
 

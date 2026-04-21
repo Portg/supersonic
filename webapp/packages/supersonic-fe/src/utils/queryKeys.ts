@@ -1,13 +1,20 @@
-function readTenantId(defaultId = 1): number {
+import { TENANT_ID_KEY } from '@/common/constants';
+
+export function getCurrentTenantId(defaultId = 1): number {
   try {
-    const raw = localStorage.getItem('X-Tenant-Id');
-    if (raw) { const n = parseInt(raw, 10); return isNaN(n) ? defaultId : n; }
-  } catch { /* non-browser env */ }
+    const raw = localStorage.getItem(TENANT_ID_KEY);
+    if (raw) {
+      const n = parseInt(raw, 10);
+      return isNaN(n) ? defaultId : n;
+    }
+  } catch {
+    // non-browser env
+  }
   return defaultId;
 }
 
 function tenantNs(tenantId?: number): readonly [string] {
-  const id = tenantId ?? readTenantId(1);
+  const id = tenantId ?? getCurrentTenantId(1);
   return [`t:${id}`] as const;
 }
 

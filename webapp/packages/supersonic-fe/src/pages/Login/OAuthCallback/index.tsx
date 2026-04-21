@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Spin, Result, Button } from 'antd';
 import { history, useModel } from '@umijs/max';
-import { AUTH_TOKEN_KEY, TENANT_ID_KEY } from '@/common/constants';
+import { AUTH_TOKEN_KEY, TENANT_ID_KEY, REFRESH_TOKEN_KEY, SESSION_ID_KEY } from '@/common/constants';
 import { queryCurrentUser } from '@/services/user';
 import { ROUTE_AUTH_CODES } from '../../../../config/routes';
 import { exchangeOAuthCode } from '../services';
@@ -46,12 +46,12 @@ const OAuthCallback: React.FC = () => {
 
         // Store refresh token if provided
         if (result.refresh_token) {
-          localStorage.setItem('SUPERSONIC_REFRESH_TOKEN', result.refresh_token);
+          localStorage.setItem(REFRESH_TOKEN_KEY, result.refresh_token);
         }
 
         // Store session ID if provided
         if (result.session_id) {
-          localStorage.setItem('SUPERSONIC_SESSION_ID', result.session_id);
+          localStorage.setItem(SESSION_ID_KEY, result.session_id);
         }
 
         // Fetch current user info

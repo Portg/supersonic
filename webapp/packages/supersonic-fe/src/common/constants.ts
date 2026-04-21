@@ -4,6 +4,11 @@ export const AUTH_TOKEN_KEY = process.env.APP_TARGET === 'inner' ? 'TME_TOKEN' :
 export const FROM_URL_KEY = 'FROM_URL';
 // 租户 ID key for multi-tenancy
 export const TENANT_ID_KEY = 'X-Tenant-Id';
+// OAuth / session keys
+export const REFRESH_TOKEN_KEY = 'SUPERSONIC_REFRESH_TOKEN';
+export const SESSION_ID_KEY = 'SUPERSONIC_SESSION_ID';
+export const USER_NAME_KEY = 'user';
+export const ORGANIZATION_KEY = 'organization';
 
 export const BASE_TITLE = 'Supersonic';
 

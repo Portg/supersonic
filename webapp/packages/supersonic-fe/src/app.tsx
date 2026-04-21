@@ -12,7 +12,7 @@ import type { DefaultSetting } from '../config/defaultSettings';
 import { Copilot } from 'supersonic-chat-sdk';
 import { configProviderTheme } from '../config/themeSettings';
 export { requestConfig as request } from './services/request';
-import { BASE_TITLE } from '@/common/constants';
+import { BASE_TITLE, USER_NAME_KEY, ORGANIZATION_KEY } from '@/common/constants';
 import { ROUTE_AUTH_CODES } from '../config/routes';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
@@ -79,9 +79,9 @@ export async function getInitialState(): Promise<{
   }
 
   if (currentUser) {
-    localStorage.setItem('user', currentUser.staffName);
+    localStorage.setItem(USER_NAME_KEY, currentUser.staffName);
     if (currentUser.orgName) {
-      localStorage.setItem('organization', currentUser.orgName);
+      localStorage.setItem(ORGANIZATION_KEY, currentUser.orgName);
     }
   }
 

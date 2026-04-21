@@ -61,3 +61,45 @@ You can view full document on our [official website](https://pro.ant.design). An
 #### 踩坑
 
 1.antd `Select`组件如果默认不选中时默认值不是`undefeated`，则不显示 placeholder
+
+## Data Fetching with React Query
+
+Since P2-10, all new remote reads go through **TanStack Query v5**. See:
+
+- `src/utils/queryClient.ts` — shared `QueryClient` with `staleTime: 30s`, `refetchOnWindowFocus: false`, 4xx-skipping retry, and global `notification.error` for 5xx/network errors.
+- `src/utils/queryKeys.ts` — typed `queryKeys` factory namespaced by `tenantId` from `localStorage`.
+- `src/hooks/queries/<domain>.ts` — `useXxxQuery` / `useXxxMutation` hooks.
+- `src/hooks/queries/README.md` — 4-step conversion recipe with before/after example.
+- `src/components/QueryBoundary/index.tsx` — `<QueryBoundary>` for `Skeleton` / `Result` rendering.
+
+DevTools are enabled automatically when `REACT_APP_ENV !== 'prod'`.
+
+### Writing a new query
+
+```ts
+export function useMyListQuery(params: MyParams) {
+  return useQuery({
+    queryKey: queryKeys.myDomain.list(params),
+    queryFn: () => getMyList(params),
+    placeholderData: (prev) => prev,
+  });
+}
+```
+
+### Writing a new mutation
+
+```ts
+const qc = useQueryClient();
+const save = useMutation({
+  mutationFn: (v) => v.id ? update(v.id, v.values) : create(v.values),
+  onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.myDomain.all() }),
+});
+```
+
+DO NOT call `message.error` manually on failure — the global handler already does it. Opt out with `meta: { silent: true }` on the hook if a page needs inline error UI instead.
+
+### Tests
+
+Query hooks are tested with `@testing-library/react`'s `renderHook` wrapped in a fresh `QueryClient`. See `tests/unit/reportScheduleQuery.test.js` for the canonical pattern.
+
+Run: `pnpm run test:unit` (jsdom + Jest via `scripts/run-unit-tests.cjs`).

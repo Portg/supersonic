@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.tencent.supersonic.common.config.TenantConfig;
 import com.tencent.supersonic.common.context.TenantContext;
+import com.tencent.supersonic.common.outbox.OutboxPublisher;
 import com.tencent.supersonic.common.pojo.User;
 import com.tencent.supersonic.common.pojo.exception.InvalidArgumentException;
 import com.tencent.supersonic.common.util.JsonUtil;
@@ -58,6 +59,7 @@ public class SemanticTemplateServiceImpl extends
     private final SemanticDeploymentMapper deploymentMapper;
     private final SemanticDeployExecutor deployExecutor;
     private final ApplicationEventPublisher applicationEventPublisher;
+    private final OutboxPublisher outboxPublisher;
     private final TenantConfig tenantConfig;
     private final ThreadPoolExecutor deployPool;
     private final DomainService domainService;
@@ -65,12 +67,13 @@ public class SemanticTemplateServiceImpl extends
 
     public SemanticTemplateServiceImpl(SemanticDeploymentMapper deploymentMapper,
             @Lazy SemanticDeployExecutor deployExecutor,
-            ApplicationEventPublisher applicationEventPublisher, TenantConfig tenantConfig,
-            @Qualifier("deployExecutor") ThreadPoolExecutor deployPool, DomainService domainService,
-            @Lazy ReportScheduleService reportScheduleService) {
+            ApplicationEventPublisher applicationEventPublisher, OutboxPublisher outboxPublisher,
+            TenantConfig tenantConfig, @Qualifier("deployExecutor") ThreadPoolExecutor deployPool,
+            DomainService domainService, @Lazy ReportScheduleService reportScheduleService) {
         this.deploymentMapper = deploymentMapper;
         this.deployExecutor = deployExecutor;
         this.applicationEventPublisher = applicationEventPublisher;
+        this.outboxPublisher = outboxPublisher;
         this.tenantConfig = tenantConfig;
         this.deployPool = deployPool;
         this.domainService = domainService;
@@ -264,7 +267,7 @@ public class SemanticTemplateServiceImpl extends
                 SemanticDeployResult result = deployExecutor.execute(template, param, user,
                         step -> updateDeploymentStep(deployment, step));
 
-                applicationEventPublisher.publishEvent(new TemplateDeployedEvent(this, result,
+                outboxPublisher.publish(new TemplateDeployedEvent(this, result,
                         template.getTemplateConfig(), user));
 
                 deployment.setResultDetail(result);
@@ -340,7 +343,7 @@ public class SemanticTemplateServiceImpl extends
             SemanticDeployResult result = deployExecutor.execute(template, param, user,
                     step -> updateDeploymentStep(deployment, step));
 
-            applicationEventPublisher.publishEvent(
+            outboxPublisher.publish(
                     new TemplateDeployedEvent(this, result, template.getTemplateConfig(), user));
 
             deployment.setResultDetail(result);

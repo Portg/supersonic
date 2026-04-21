@@ -1,3 +1,5 @@
+# H2 in-memory DB — dev/CI only. Flyway disabled; schema bootstrapped from schema-h2.sql.
+# Shared Flyway settings (baseline-on-migrate, baseline-version, table, out-of-order) live in application.yaml.
 spring:
   datasource:
     driver-class-name: org.h2.Driver

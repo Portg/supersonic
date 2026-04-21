@@ -63,6 +63,15 @@ spring:
       org.quartz.threadPool.threadPriority: 5
       org.quartz.threadPool.makeThreadsDaemons: true
 
+  # Flyway: shared settings across mysql+postgres profiles.
+  # Per-DB overrides (enabled, locations, validate-on-migrate) live in application-{mysql,postgres,h2}.yaml.
+  flyway:
+    baseline-on-migrate: true
+    # 基线版本：已有数据库从此版本开始；新部署设置为 -1（执行所有迁移）。
+    baseline-version: ${FLYWAY_BASELINE_VERSION:-1}
+    table: flyway_schema_history
+    out-of-order: false
+
   mail:
     host: ${EMAIL_HOST}
     port: ${EMAIL_PORT}

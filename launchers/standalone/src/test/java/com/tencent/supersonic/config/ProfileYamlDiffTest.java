@@ -116,10 +116,15 @@ class ProfileYamlDiffTest {
         }
         YamlPropertiesFactoryBean yaml = new YamlPropertiesFactoryBean();
         yaml.setResources(res);
+        yaml.afterPropertiesSet();
         Properties props = yaml.getObject();
         if (props == null) {
             return Set.of();
         }
-        return props.stringPropertyNames();
+        // Use keySet() rather than stringPropertyNames() so that boolean YAML values
+        // (e.g. baseline-on-migrate: true) are included — stringPropertyNames() skips
+        // entries whose value is not a java.lang.String.
+        return props.keySet().stream().map(Object::toString)
+                .collect(java.util.stream.Collectors.toSet());
     }
 }

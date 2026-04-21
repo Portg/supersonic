@@ -1,3 +1,5 @@
+# MySQL dialect — JDBC + dialect-specific Flyway overrides only.
+# Shared Flyway settings (baseline-on-migrate, baseline-version, table, out-of-order) live in application.yaml.
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -14,16 +16,8 @@ spring:
       data-locations: classpath:db/data-mysql.sql,classpath:db/data-mysql-demo.sql
   flyway:
     enabled: true
-    # 对于已有数据库，设置为 true 跳过已执行的迁移
-    baseline-on-migrate: true
-    # 基线版本：已有数据库从此版本开始
-    # 新部署设置为 -1（执行所有迁移），已有数据库设置为实际版本
-    baseline-version: ${FLYWAY_BASELINE_VERSION:-1}
     locations: classpath:db/migration/mysql
-    table: flyway_schema_history
-    # 允许乱序执行（用于修复脚本）
-    out-of-order: false
-    # 验证迁移脚本（关闭以允许修复已有脚本的 display width deprecation warning）
+    # 关闭以允许修复已有脚本的 display width deprecation warning
     validate-on-migrate: false
   quartz:
     properties:

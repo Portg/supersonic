@@ -22,7 +22,12 @@
     "src/utils/menuFilter.ts",
     "src/pages/RouteGroupRedirect/resolveRedirect.ts",
     "src/pages/ReportSchedule/utils/scheduleFormValidation.ts",
+    "src/typings.unit.d.ts",
     "src/utils/queryUtils.ts",
-    "src/utils/queryKeys.ts"
+    "src/utils/queryKeys.ts",
+    "src/utils/queryClient.ts",
+    "src/hooks/queries/reportSchedule.ts",
+    "src/services/reportSchedule.ts",
+    "src/services/deliveryConfig.ts"
   ]
 }

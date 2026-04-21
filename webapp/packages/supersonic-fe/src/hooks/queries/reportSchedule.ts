@@ -71,7 +71,29 @@ export function useScheduleDeleteMutation() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => deleteSchedule(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.reportSchedule.all() }),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: queryKeys.reportSchedule.all() });
+      const snapshots = qc.getQueriesData<{ records: ReportSchedule[]; total: number }>({
+        queryKey: queryKeys.reportSchedule.all(),
+      });
+      snapshots.forEach(([key, data]) => {
+        if (!data) return;
+        qc.setQueryData(key, {
+          ...data,
+          records: data.records.filter((r) => r.id !== id),
+          total: Math.max(0, (data.total ?? 0) - 1),
+        });
+      });
+      return { snapshots };
+    },
+    onError: (_err, _id, ctx) => {
+      ctx?.snapshots.forEach(([key, data]) => {
+        qc.setQueryData<{ records: ReportSchedule[]; total: number }>(key, data);
+      });
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.reportSchedule.all() });
+    },
   });
 }
 

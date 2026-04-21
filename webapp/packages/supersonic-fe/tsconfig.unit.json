@@ -28,6 +28,7 @@
     "src/utils/queryClient.ts",
     "src/hooks/queries/reportSchedule.ts",
     "src/services/reportSchedule.ts",
-    "src/services/deliveryConfig.ts"
+    "src/services/deliveryConfig.ts",
+    "src/components/QueryBoundary/index.tsx"
   ]
 }

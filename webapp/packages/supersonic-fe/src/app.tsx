@@ -14,11 +14,24 @@ import { configProviderTheme } from '../config/themeSettings';
 export { requestConfig as request } from './services/request';
 import { BASE_TITLE } from '@/common/constants';
 import { ROUTE_AUTH_CODES } from '../config/routes';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { queryClient } from '@/utils/queryClient';
 const replaceRoute = '/operations-cockpit';
 
 Spin.setDefaultIndicator(
   <ScaleLoader color={settings['primary-color']} height={25} width={2} radius={2} margin={2} />,
 );
+
+export function rootContainer(container: React.ReactNode) {
+  const showDevtools = process.env.REACT_APP_ENV !== 'prod';
+  return (
+    <QueryClientProvider client={queryClient}>
+      {container}
+      {showDevtools ? <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" /> : null}
+    </QueryClientProvider>
+  );
+}
 
 const getAuthCodes = (params: any) => {
   const { currentUser } = params;
